@@ -1,0 +1,25 @@
+# pycharm
+.idea
+*.xml
+
+# model
+
+
+# image
+*.png
+*.jpg
+*.JPG
+
+# txt result
+*.txt
+
+# 编译
+*.pyc
+__*
+
+# logs output
+events*
+*.pkl
+
+# mAP
+*json
