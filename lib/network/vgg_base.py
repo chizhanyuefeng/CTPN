@@ -1,7 +1,7 @@
 import tensorflow.contrib.slim as slim
 from lib.utils.config import cfg
 
-def VggBase(inputs):
+def vgg_base(inputs, scope=None):
     featuremap_scale = 1
 
     net = slim.conv2d(inputs, 64, [3, 3], scope='conv1_1')
