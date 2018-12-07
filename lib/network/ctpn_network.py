@@ -6,6 +6,7 @@ from tensorflow.python import pywrap_tensorflow
 from lib.utils.config import cfg
 from lib.network.inception_base import inception_base
 from lib.network.vgg_base import vgg_base
+from lib.rpn_layer.generate_anchors import generate_anchors
 
 class CTPN(object):
 
@@ -13,16 +14,79 @@ class CTPN(object):
         pass
 
     def inference(self):
-
+        self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
         proposal_predicted, proposal_cls_score = self.__ctpn_base()
 
+
         proposal_cls_score_shape = tf.shape(proposal_cls_score)
-        proposal_cls_score = tf.reshape(proposal_predicted, [-1, cfg["CLASSES_NUM"]])
-        proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score), proposal_cls_score_shape)
+        self.proposal_cls_score = tf.reshape(proposal_predicted, [-1, cfg["CLASSES_NUM"]])
+        self.proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score), proposal_cls_score_shape)
 
 
     def __proposal_layer(self):
+        anchors = generate_anchors()
+        anchor_num = anchors.shape[0]
+
+        # 原始图像的高宽、缩放尺度
+        img_info = self.im_info[0]
+        pre_nms_topN = cfg["TEST"]["RPN_PRE_NMS_TOP_N"]
+        post_nms_topN = cfg["TEST"]["RPN_POST_NMS_TOP_N"]
+        nms_thresh = cfg["TEST"]["RPN_NMS_THRESH"]
+        min_size = cfg["TEST"]["RPN_MIN_SIZE"]
+
+        # feature-map的高宽
+        height, width = tf.shape(self.proposal_cls_prob.shape[1:3])
+
+        # 获取第一个分类结果
+        scores = tf.reshape(tf.reshape(self.proposal_cls_prob, [1, height, width, anchor_num, cfg["CLASSES_NUM"]])[:, :, :, :, 1],
+                            [1, height, width, anchor_num])
+
+        bbox_deltas = self.proposal_cls_prob
+
+        # 同anchor-target-layer-tf这个文件一样，生成anchor的shift，进一步得到整张图像上的所有anchor
+        feat_stride = [cfg["ANCHOR_WIDTH"]]
+        shift_x = tf.range(0, width) * feat_stride
+        shift_y = tf.range(0, height) * feat_stride
+
+        # shift_x shape = [height, width]
+        # 生成同样维度的两个矩阵
+        shift_x, shift_y = tf.meshgrid(shift_x, shift_y)
+        # shifts shape = [height*width,4]
+        shifts = tf.transpose(tf.stack((tf.reshape(shift_x, [-1]), tf.reshape(shift_y, [-1]),
+                                        tf.reshape(shift_x, [-1]), tf.reshape(shift_y, [-1]))))
+
+        # Enumerate all shifted anchors:
+        #
+        # add A anchors (1, A, 4) to
+        # cell K shifts (K, 1, 4) to get
+        # shift anchors (K, A, 4)
+        # reshape to (K*A, 4) shifted anchors
+        A = anchor_num  # 10
+        K = shifts.shape[0]  # height*width,[height*width,4]
+        anchors = anchors.reshape((1, A, 4)) + \
+                  shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+
+        anchors = anchors.reshape((K * A, 4))  # 这里得到的anchor就是整张图像上的所有anchor
+
+        # (HxWxA, 2)
+        bbox_deltas = tf.reshape(bbox_deltas, (-1, 2))
+
+        # Same story for the scores:
+        scores = tf.reshape(scores, (-1, 1))
+
+        # Convert anchors into proposals via bbox transformations
+        proposals = bbox_transform_inv(anchors, bbox_deltas)  # 做逆变换，得到box在图像上的真实坐标
+
+        # 2. clip predicted boxes to image
+        proposals = clip_boxes(proposals, im_info[:2])  # 将所有的proposal修建一下，超出图像范围的将会被修剪掉
+
+
+    def bbox_transform_inv(self):
         pass
+
+    def clip_boxes(self):
+        pass
+
 
     def __anchor_layer(self):
         pass
@@ -41,7 +105,7 @@ class CTPN(object):
                 if cfg["BACKBONE"] == "InceptionNet":
                     features = inception_base(inputs_img_tensor)
                 elif cfg["BACKBONE"] == "VggNet":
-                    features = inception_base(inputs_img_tensor)
+                    features = vgg_base(inputs_img_tensor)
                 else:
                     assert 0, "error: backbone {} is not support!".format(cfg["BACKBONE"])
 
@@ -99,7 +163,26 @@ class CTPN(object):
         pass
 
 if __name__ == "__main__":
-    pretrain_model_path = './models/pretrain_model/inception_v4.ckpt'
-    reader = pywrap_tensorflow.NewCheckpointReader(pretrain_model_path)
-    keys = reader.get_variable_to_shape_map().keys()
-    print(keys)
+    # pretrain_model_path = './models/pretrain_model/inception_v4.ckpt'
+    # reader = pywrap_tensorflow.NewCheckpointReader(pretrain_model_path)
+    # keys = reader.get_variable_to_shape_map().keys()
+    # print(keys)
+
+    a = np.zeros([1,2])
+    b = np.ones([4,2])
+    print(np.vstack((a,b)))
+
+    feat_stride = [16]
+    shift_x = tf.range(0, 4) * feat_stride
+    shift_y = tf.range(0, 5) * feat_stride
+
+    # shift_x shape = [height, width]
+    # 生成同样维度的两个矩阵
+    shift_x, shift_y = tf.meshgrid(shift_x, shift_y)
+
+    # shifts shape = [height*width,4]
+    shifts = tf.transpose(tf.stack((tf.reshape(shift_x,[-1]), tf.reshape(shift_y,[-1]),
+                          tf.reshape(shift_x,[-1]), tf.reshape(shift_y,[-1]))))
+
+    sess = tf.Session()
+    print(sess.run(shifts))

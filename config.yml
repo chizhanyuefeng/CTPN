@@ -36,3 +36,11 @@ TEST:
   DETECT_MODE: H
   checkpoints_path: checkpoints/
   # checkpoints_path: output/ctpn_end2end/voc_2007_trainval
+  # 在做nms之前，最多保留的候选box数目
+  RPN_PRE_NMS_TOP_N: 12000
+  # 做完nms之后，最多保留的box的数目
+  RPN_POST_NMS_TOP_N: 2000
+  # nms 阈值
+  RPN_NMS_THRESH: 0.7
+  # 候选box的最小尺寸
+  RPN_MIN_SIZE: 8
