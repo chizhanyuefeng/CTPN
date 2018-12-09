@@ -1,9 +1,11 @@
 # -*- coding:utf-8 -*-
 import numpy as np
-from .generate_anchors import generate_anchors
-from lib.fast_rcnn.config import cfg
-from lib.fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
-from lib.fast_rcnn.nms_wrapper import nms,py_cpu_nms
+from lib.rpn_layer.generate_anchors import generate_anchors
+
+
+from lib.utils.config import cfg
+from lib.utils.bbox_transform import bbox_transform_inv, clip_boxes
+from lib.nms.nms_wrapper import nms, py_cpu_nms
 
 
 DEBUG = False
