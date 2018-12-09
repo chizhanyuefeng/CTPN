@@ -6,7 +6,7 @@ from lib.bbox_utils.bbox import bbox_overlaps, bbox_intersections
 from lib.utils.config import cfg
 from lib.bbox_utils.bbox_transform import bbox_transform
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, gt_ishard, dontcare_areas, im_info, _feat_stride = [cfg["ANCHOR_WIDTH"],], anchor_scales = [cfg["ANCHOR_WIDTH"],]):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["ANCHOR_WIDTH"],], anchor_scales = [cfg["ANCHOR_WIDTH"],]):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
@@ -116,32 +116,6 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, gt_ishard, dontcare_areas, im_i
     if cfg.TRAIN.RPN_CLOBBER_POSITIVES:
         # assign bg labels last so that negative labels can clobber positives
         labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0
-
-    # preclude dontcare areas
-    if dontcare_areas is not None and dontcare_areas.shape[0] > 0:#这里我们暂时不考虑有doncare_area的存在
-        # intersec shape is D x A
-        intersecs = bbox_intersections(
-            np.ascontiguousarray(dontcare_areas, dtype=np.float), # D x 4
-            np.ascontiguousarray(anchors, dtype=np.float) # A x 4
-        )
-        intersecs_ = intersecs.sum(axis=0) # A x 1
-        labels[intersecs_ > cfg.TRAIN.DONTCARE_AREA_INTERSECTION_HI] = -1
-
-    #这里我们暂时不考虑难样本的问题
-    # preclude hard samples that are highly occlusioned, truncated or difficult to see
-    if cfg.TRAIN.PRECLUDE_HARD_SAMPLES and gt_ishard is not None and gt_ishard.shape[0] > 0:
-        assert gt_ishard.shape[0] == gt_boxes.shape[0]
-        gt_ishard = gt_ishard.astype(int)
-        gt_hardboxes = gt_boxes[gt_ishard == 1, :]
-        if gt_hardboxes.shape[0] > 0:
-            # H x A
-            hard_overlaps = bbox_overlaps(
-                np.ascontiguousarray(gt_hardboxes, dtype=np.float), # H x 4
-                np.ascontiguousarray(anchors, dtype=np.float)) # A x 4
-            hard_max_overlaps = hard_overlaps.max(axis=0)  # (A)
-            labels[hard_max_overlaps >= cfg.TRAIN.RPN_POSITIVE_OVERLAP] = -1
-            max_intersec_label_inds = hard_overlaps.argmax(axis=1) # H x 1
-            labels[max_intersec_label_inds] = -1 #
 
     # subsample positive labels if we have too many
     #对正样本进行采样，如果正样本的数量太多的话
