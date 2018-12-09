@@ -12,65 +12,30 @@ from lib.rpn_layer.proposal_layer_tf import proposal_layer
 
 class CTPN(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, is_train=False):
+        self.img_input = tf.placeholder(tf.float32, shape=[None, None, None, 3], name="img_input")
+        self.im_info = tf.placeholder(tf.float32, shape=[None, 3], name="im_info")
+
+        if is_train:
+            self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5], name='gt_boxes')
+
 
     def inference(self):
-        self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
-        self.proposal_predicted, proposal_cls_score = self.__ctpn_base()
 
-        proposal_cls_score_shape = tf.shape(proposal_cls_score)
-        self.proposal_cls_score = tf.reshape(proposal_cls_score, [-1, cfg["CLASSES_NUM"]])
-        self.proposal_cls_prob = tf.reshape(tf.nn.softmax(self.proposal_cls_score), proposal_cls_score_shape)
+        proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
+        rpn_rois, rpn_targets = self.__proposal_layer(proposal_cls_prob, proposal_predicted)
 
-    def __proposal_layer(self):
-        """
-        回归proposal框
-        :param input: shape = ['rpn_cls_prob_reshape', 'rpn_bbox_pred', 'im_info']
-        :param _feat_stride: [16, ]
-        :param anchor_scales: [16]
-        :param cfg_key: "TEST"
-        :param name:
-        :return:
-        """
+        return rpn_rois
 
-        # input[0] shape is (1, H, W, Ax2)
-        # rpn_rois <- (1 x H x W x A, 5) [0, x1, y1, x2, y2]
-        with tf.variable_scope("proposal_layer"):
-            blob, bbox_delta = tf.py_func(proposal_layer,
-                                          [self.proposal_cls_prob, self.proposal_predicted, self.im_info, "TEST", [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
-                                          [tf.float32, tf.float32])
+    def train(self):
+        proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
+        rpn_labels, \
+        rpn_bbox_targets, \
+        rpn_bbox_inside_weights, \
+        rpn_bbox_outside_weights = self.__anchor_layer(proposal_predicted)
 
-            rpn_rois = tf.reshape(blob, [-1, 5], name='rpn_rois')  # shape is (1 x H x W x A, 2)
-            rpn_targets = tf.convert_to_tensor(bbox_delta, name='rpn_targets')  # shape is (1 x H x W x A, 4)
-            return rpn_rois, rpn_targets
+        
 
-
-    def bbox_transform_inv(self):
-        pass
-
-    def clip_boxes(self):
-        pass
-
-
-    def __anchor_layer(self):
-        with tf.variable_scope(name) as scope:
-            # 'rpn_cls_score', 'gt_boxes', 'gt_ishard', 'dontcare_areas', 'im_info'
-            rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
-                tf.py_func(anchor_target_layer,
-                           [self.proposal_cls_score, self.proposal_predicted, self.im_info, [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
-                           [tf.float32, tf.float32, tf.float32, tf.float32])
-
-            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),
-                                              name='rpn_labels')  # shape is (1 x H x W x A, 2)
-            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets,
-                                                    name='rpn_bbox_targets')  # shape is (1 x H x W x A, 4)
-            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights,
-                                                           name='rpn_bbox_inside_weights')  # shape is (1 x H x W x A, 4)
-            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights,
-                                                            name='rpn_bbox_outside_weights')  # shape is (1 x H x W x A, 4)
-
-            return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
     def __ctpn_base(self):
         stddev = 0.01
@@ -98,8 +63,53 @@ class CTPN(object):
                 proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='bbox_conv_1x1')
                 # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
                 proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='bbox_conv_1x1')
+                # softmax
+                proposal_cls_score_shape = tf.shape(proposal_cls_score)
+                proposal_cls_score = tf.reshape(proposal_cls_score, [-1, cfg["CLASSES_NUM"]])
+                proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score), proposal_cls_score_shape)
 
-        return proposal_predicted, proposal_cls_score
+        return proposal_predicted, proposal_cls_score, proposal_cls_prob
+
+    def __proposal_layer(self, proposal_cls_prob, proposal_predicted):
+        """
+        回归proposal框
+        :param input: shape = ['rpn_cls_prob_reshape', 'rpn_bbox_pred', 'im_info']
+        :param _feat_stride: [16, ]
+        :param anchor_scales: [16]
+        :param cfg_key: "TEST"
+        :param name:
+        :return:
+        """
+
+        # input[0] shape is (1, H, W, Ax2)
+        # rpn_rois <- (1 x H x W x A, 5) [0, x1, y1, x2, y2]
+        with tf.variable_scope("proposal_layer"):
+            blob, bbox_delta = tf.py_func(proposal_layer,
+                                          [proposal_cls_prob, proposal_predicted, self.im_info, "TEST", [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
+                                          [tf.float32, tf.float32])
+
+            rpn_rois = tf.reshape(blob, [-1, 5], name='rpn_rois')  # shape is (1 x H x W x A, 2)
+            rpn_targets = tf.convert_to_tensor(bbox_delta, name='rpn_targets')  # shape is (1 x H x W x A, 4)
+            return rpn_rois, rpn_targets
+
+    def __anchor_layer(self, proposal_predicted):
+        with tf.variable_scope("anchor_layer"):
+            # 'rpn_cls_score', 'gt_boxes', 'gt_ishard', 'dontcare_areas', 'im_info'
+            rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
+                tf.py_func(anchor_target_layer,
+                           [proposal_predicted, self.gt_boxes, self.im_info, [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
+                           [tf.float32, tf.float32, tf.float32, tf.float32])
+
+            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),
+                                              name='rpn_labels')  # shape is (1 x H x W x A, 2)
+            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets,
+                                                    name='rpn_bbox_targets')  # shape is (1 x H x W x A, 4)
+            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights,
+                                                           name='rpn_bbox_inside_weights')  # shape is (1 x H x W x A, 4)
+            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights,
+                                                            name='rpn_bbox_outside_weights')  # shape is (1 x H x W x A, 4)
+
+            return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
     def __Bilstm(self, input, d_i, d_h, d_o, name="Bilstm"):
         """
@@ -132,13 +142,6 @@ class CTPN(object):
             outputs = tf.reshape(outputs, [N, H, W, d_o])
 
             return outputs
-
-
-    def _proposal_layer(self):
-        pass
-
-    def _anchor_layer(self):
-        pass
 
     def loss(self):
         pass
