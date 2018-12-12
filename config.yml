@@ -4,7 +4,7 @@ BACKBONE: "InceptionNet"
 ANCHOR_WIDTH: 16
 ANCHOR_HEIGHT: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
 CLASSES_NUM: 2
-CLASSES: ["backgroung", "text"]
+CLASSES_NAME: ["backgroung", "text"]
 USE_GPU_NMS: True
 INPUT_NORMALIZATION: False
 TRAIN:
