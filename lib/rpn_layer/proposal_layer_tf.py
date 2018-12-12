@@ -133,9 +133,10 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg_key, _feat_
     # Same story for the scores:
     scores = scores.reshape((-1, 1))
 
+    # TODO: 回归2个值需要进行修改
     # Convert anchors into proposals via bbox transformations
     proposals = bbox_transform_inv(anchors, bbox_deltas)#做逆变换，得到box在图像上的真实坐标
-
+    # TODO: 回归2个值需要进行修改
     # 2. clip predicted boxes to image
     proposals = clip_boxes(proposals, im_info[:2])#将所有的proposal修建一下，超出图像范围的将会被修剪掉
 
