@@ -16,12 +16,6 @@ class CTPN(object):
         self.img_input = tf.placeholder(tf.float32, shape=[None, None, None, 3], name="img_input")
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3], name="im_info")
 
-
-
-        if is_train:
-            self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5], name='gt_boxes')
-
-
     def inference(self):
 
         proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
@@ -30,6 +24,9 @@ class CTPN(object):
         return rpn_rois
 
     def build_loss(self):
+
+        self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5], name='gt_boxes')
+
         proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
         rpn_labels, \
         rpn_bbox_targets, \
