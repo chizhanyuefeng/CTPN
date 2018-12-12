@@ -16,6 +16,8 @@ class CTPN(object):
         self.img_input = tf.placeholder(tf.float32, shape=[None, None, None, 3], name="img_input")
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3], name="im_info")
 
+
+
         if is_train:
             self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5], name='gt_boxes')
 
@@ -32,7 +34,7 @@ class CTPN(object):
         rpn_labels, \
         rpn_bbox_targets, \
         rpn_bbox_inside_weights, \
-        rpn_bbox_outside_weights = self.__anchor_layer(proposal_predicted)
+        rpn_bbox_outside_weights = self.__anchor_layer(proposal_cls_score)
 
         # classification loss
         rpn_cls_score = tf.reshape(proposal_cls_prob, [-1, 2])  # shape (HxWxA, 2)
@@ -44,13 +46,12 @@ class CTPN(object):
         rpn_label = tf.gather(rpn_label, rpn_keep)
         rpn_cross_entropy_n = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=rpn_label, logits=rpn_cls_score)
 
-        # box loss
+        # box loss TODO:回归2个值
         rpn_bbox_pred = proposal_predicted  # shape (1, H, W, Ax4)
         rpn_bbox_pred = tf.gather(tf.reshape(rpn_bbox_pred, [-1, 4]), rpn_keep)  # shape (N, 4)
         rpn_bbox_targets = tf.gather(tf.reshape(rpn_bbox_targets, [-1, 4]), rpn_keep)
         rpn_bbox_inside_weights = tf.gather(tf.reshape(rpn_bbox_inside_weights, [-1, 4]), rpn_keep)
         rpn_bbox_outside_weights = tf.gather(tf.reshape(rpn_bbox_outside_weights, [-1, 4]), rpn_keep)
-
 
         rpn_loss_box_n = tf.reduce_sum(rpn_bbox_outside_weights * self.__smooth_l1_dist(
             rpn_bbox_inside_weights * (rpn_bbox_pred - rpn_bbox_targets)), reduction_indices=[1])
@@ -92,10 +93,10 @@ class CTPN(object):
 
                 features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
                 features_channel = tf.shape(features)[-1]
-                features = self.__Bilstm(features, features_channel, 128, features_channel)
+                features = self.__bilstm(features, features_channel, 128, features_channel)
 
-                # proposal_predicted shape = [1, h, w, A*2]
-                proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 2, [1, 1], scope='proposal_conv_1x1')
+                # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
+                proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
                 # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
                 proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1')
                 proposal_cls_score_shape = tf.shape(proposal_cls_score)
@@ -110,7 +111,7 @@ class CTPN(object):
         """
         回归proposal框
         :param proposal_cls_prob: shape = [1, h, w, Axclass_num]
-        :param proposal_predicted: shape = [1, h, w, Ax2]
+        :param proposal_predicted: shape = [1, h, w, Ax2] TODO:回归2个值
         :return rpn_rois : shape = [1 x H x W x A, 5]
                 rpn_targets : shape = [1 x H x W x A, 2]
         """
@@ -123,12 +124,12 @@ class CTPN(object):
             rpn_targets = tf.convert_to_tensor(bbox_delta, name='rpn_targets')
             return rpn_rois, rpn_targets
 
-    def __anchor_layer(self, proposal_predicted):
+    def __anchor_layer(self, proposal_cls_score):
         with tf.variable_scope("anchor_layer"):
             # 'rpn_cls_score', 'gt_boxes', 'gt_ishard', 'dontcare_areas', 'im_info'
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
                 tf.py_func(anchor_target_layer,
-                           [proposal_predicted, self.gt_boxes, self.im_info, [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
+                           [proposal_cls_score, self.gt_boxes, self.im_info, [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
                            [tf.float32, tf.float32, tf.float32, tf.float32])
 
             rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),
@@ -142,7 +143,7 @@ class CTPN(object):
 
             return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
-    def __Bilstm(self, input, d_i, d_h, d_o, name="Bilstm"):
+    def __bilstm(self, input, d_i, d_h, d_o, name="Bilstm"):
         """
         双向rnn
         :param input:
