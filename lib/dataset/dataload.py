@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 
 from lib.utils.config import cfg
+from lib.dataset.img_utils import img_normailize
 
 class Dataload(object):
 
@@ -20,11 +21,12 @@ class Dataload(object):
         assert len(self.img_path_list) == len(label_path_list), \
             "img num={} is not equal with label num={}".format(len(self.img_path_list), len(label_path_list))
 
-        self.class_dict = {name: i for i, name in enumerate(cfg["CLASSES"])}
+        self.class_dict = {name: i for i, name in enumerate(cfg["CLASSES_NAME"])}
 
     def getbatch(self):
         img = cv2.imread(os.path.join(self.img_dir, self.img_path_list[self.current_index]))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img_normailize(img)
         h, w, c = img.shape
         img_data = np.reshape(img, [1, h, w, c])
 

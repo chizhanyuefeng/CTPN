@@ -5,6 +5,7 @@ import cv2 as cv
 
 from lib.dataset.parse_xml import ParseXml
 from lib.utils.config import cfg
+from lib.dataset.img_utils import resize_img
 
 train_img_dir = "/workspace/ocr_dataset/ctpn_v2/img"
 train_xml_dir = "/workspace/ocr_dataset/ctpn_v2/xml"
@@ -43,12 +44,8 @@ for file in files:
     im_size_min = np.min(img_size[0:2])
     im_size_max = np.max(img_size[0:2])
 
-    im_scale = float(600) / float(im_size_min)
-    if np.round(im_scale * im_size_max) > 1200:
-        im_scale = float(1200) / float(im_size_max)
+    re_im, im_scale = resize_img(img)
 
-    # 图像进行resize
-    re_im = cv.resize(img, None, None, fx=im_scale, fy=im_scale, interpolation=cv.INTER_LINEAR)
     re_size = re_im.shape
     cv.imwrite(os.path.join(out_path, stem) + '.jpg', re_im)
 
@@ -89,7 +86,6 @@ for file in files:
         width = xmax - xmin + 1
         height = ymax - ymin + 1
 
-        # TODO proposal 宽度
         step = proposal_width
         x_left = []
         x_right = []
