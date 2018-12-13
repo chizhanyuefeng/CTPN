@@ -29,7 +29,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     rpn_bbox_outside_weights: (HxWxA, 4) used to balance the fg/bg,
                             beacuse the numbers of bgs and fgs mays significiantly different
     """
-    _anchors = generate_anchors(scales=np.array(anchor_scales))#生成基本的anchor,一共10个
+    _anchors = generate_anchors()#生成基本的anchor,一共10个
     _num_anchors = _anchors.shape[0]#9个anchor
 
     # allow boxes to sit over the edge by a small amount
@@ -104,24 +104,24 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
                                np.arange(overlaps.shape[1])]
     gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
 
-    if not cfg.TRAIN.RPN_CLOBBER_POSITIVES:
+    if not cfg["TRAIN"]["RPN_CLOBBER_POSITIVES"]:
         # assign bg labels first so that positive labels can clobber them
-        labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0#先给背景上标签，小于0.3overlap的
+        labels[max_overlaps < cfg["TRAIN"]["RPN_NEGATIVE_OVERLAP"]] = 0#先给背景上标签，小于0.3overlap的
 
     # fg label: for each gt, anchor with highest overlap
     labels[gt_argmax_overlaps] = 1#每个位置上的9个anchor中overlap最大的认为是前景
     # fg label: above threshold IOU
-    labels[max_overlaps >= cfg.TRAIN.RPN_POSITIVE_OVERLAP] = 1#overlap大于0.7的认为是前景
+    labels[max_overlaps >= cfg["TRAIN"]["RPN_POSITIVE_OVERLAP"]] = 1#overlap大于0.7的认为是前景
 
-    if cfg.TRAIN.RPN_CLOBBER_POSITIVES:
+    if cfg["TRAIN"]["RPN_CLOBBER_POSITIVES"]:
         # assign bg labels last so that negative labels can clobber positives
-        labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0
+        labels[max_overlaps < cfg["TRAIN"]["RPN_NEGATIVE_OVERLAP"]] = 0
 
     # subsample positive labels if we have too many
     #对正样本进行采样，如果正样本的数量太多的话
     # 限制正样本的数量不超过128个
     #TODO 这个后期可能还需要修改，毕竟如果使用的是字符的片段，那个正样本的数量是很多的。
-    num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
+    num_fg = int(cfg["TRAIN"]["RPN_FG_FRACTION"] * cfg["TRAIN"]["RPN_BATCHSIZE"])
     fg_inds = np.where(labels == 1)[0]
     if len(fg_inds) > num_fg:
         disable_inds = npr.choice(
@@ -132,7 +132,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     #对负样本进行采样，如果负样本的数量太多的话
     # 正负样本总数是256，限制正样本数目最多128，
     # 如果正样本数量小于128，差的那些就用负样本补上，凑齐256个样本
-    num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
+    num_bg = cfg["TRAIN"]["RPN_BATCHSIZE"] - np.sum(labels == 1)
     bg_inds = np.where(labels == 0)[0]
     if len(bg_inds) > num_bg:
         disable_inds = npr.choice(
@@ -148,10 +148,10 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
 
 
     bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
-    bbox_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)#内部权重，前景就给1，其他是0
+    bbox_inside_weights[labels == 1, :] = np.array(cfg["TRAIN"]["RPN_BBOX_INSIDE_WEIGHTS"])#内部权重，前景就给1，其他是0
 
     bbox_outside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
-    if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:#暂时使用uniform 权重，也就是正样本是1，负样本是0
+    if cfg["TRAIN"]["RPN_POSITIVE_WEIGHT"] < 0:#暂时使用uniform 权重，也就是正样本是1，负样本是0
         # uniform weighting of examples (given non-uniform sampling)
         num_examples = np.sum(labels >= 0) + 1
         # positive_weights = np.ones((1, 4)) * 1.0 / num_examples
@@ -159,11 +159,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
         positive_weights = np.ones((1, 4))
         negative_weights = np.zeros((1, 4))
     else:
-        assert ((cfg.TRAIN.RPN_POSITIVE_WEIGHT > 0) &
-                (cfg.TRAIN.RPN_POSITIVE_WEIGHT < 1))
-        positive_weights = (cfg.TRAIN.RPN_POSITIVE_WEIGHT /
+        assert ((cfg["TRAIN"]["RPN_POSITIVE_WEIGHT"] > 0) &
+                (cfg["TRAIN"]["RPN_POSITIVE_WEIGHT"] < 1))
+        positive_weights = (cfg["TRAIN"]["RPN_POSITIVE_WEIGHT"] /
                             (np.sum(labels == 1)) + 1)
-        negative_weights = ((1.0 - cfg.TRAIN.RPN_POSITIVE_WEIGHT) /
+        negative_weights = ((1.0 - cfg["TRAIN"]["RPN_POSITIVE_WEIGHT"]) /
                             (np.sum(labels == 0)) + 1)
     bbox_outside_weights[labels == 1, :] = positive_weights#外部权重，前景是1，背景是0
     bbox_outside_weights[labels == 0, :] = negative_weights

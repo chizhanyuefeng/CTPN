@@ -10,15 +10,14 @@ from lib.dataset.dataload import Dataload
 
 class SloverWrapper(object):
 
-    def __init__(self):
-
+    def __init__(self, sess):
+        self.sess = sess
         self.network = CTPN(is_train=True)
         self.model_output_dir = cfg["TRAIN"]["MODEL_OUTPUT_DIR"]
         # self.logs_dir = cfg["TRAIN"]["LOGS_DIR"]
         self.pretrain_model = cfg["TRAIN"]["PRETRAIN_MODEL"]
 
-        self.sess = tf.Session()
-        self.saver = tf.train.Saver(max_to_keep=100, write_version=tf.train.SaverDef.V2)
+
         self.writer = tf.summary.FileWriter(logdir=cfg["TRAIN"]["LOGS_DIR"],
                                             graph=tf.get_default_graph(),
                                             flush_secs=5)
@@ -31,6 +30,7 @@ class SloverWrapper(object):
         total_loss, model_loss, rpn_cross_entropy, rpn_loss_box = self.network.build_loss()
 
         # scalar summary
+        self.saver = tf.train.Saver(max_to_keep=100, write_version=tf.train.SaverDef.V2)
         tf.summary.scalar('rpn_reg_loss', rpn_loss_box)
         tf.summary.scalar('rpn_cls_loss', rpn_cross_entropy)
         tf.summary.scalar('model_loss', model_loss)
@@ -80,8 +80,9 @@ class SloverWrapper(object):
             if iter != 0 and iter % cfg["TRAIN"]["STEPSIZE"] == 0:
                 self.sess.run(tf.assign(lr, lr.eval() * cfg["TRAIN"]["GAMMA"]))
 
-            img_input, labels = train_data_load.getbatch()
-            feed_dict = {self.network.img_input: img_input, self.network.gt_boxes: labels}
+            img_input, labels, img_info = train_data_load.getbatch()
+            # print(img_input)
+            feed_dict = {self.network.img_input: img_input, self.network.gt_boxes: labels, self.network.im_info: img_info}
 
             fetch_list = [total_loss, model_loss, rpn_cross_entropy, rpn_loss_box,
                           summary_op,
@@ -98,6 +99,12 @@ class SloverWrapper(object):
                         (iter, cfg["TRAIN"]["MAX_STEPS"], total_loss_val, model_loss_val, rpn_loss_cls_val, rpn_loss_box_val, lr.eval()))
                 self.train_logger.info('speed: {:.3f}s / iter'.format((end_time-start_time)/cfg["TRAIN"]["DISPLAY"]))
                 start_time = time.time()
+
+            if (iter+1) % cfg["TRAIN"]["SNAPSHOT_ITERS"] == 0:
+                if not os.path.exists(self.model_output_dir):
+                    os.makedirs(self.model_output_dir)
+                self.saver.save(self.sess, self.model_output_dir)
+                print('Wrote snapshot to: {:s}'.format(self.model_output_dir))
 
     def train_logger_init(self):
         """

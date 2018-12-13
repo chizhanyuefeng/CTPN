@@ -28,6 +28,7 @@ class Dataload(object):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img_normailize(img)
         h, w, c = img.shape
+        # print(img.shape)
         img_data = np.reshape(img, [1, h, w, c])
 
         label_name = self.img_path_list[self.current_index].split('.')[0] + '.txt'
@@ -54,7 +55,7 @@ class Dataload(object):
             self.current_index = 0
             random.shuffle(self.img_path_list)
 
-        return img_data, np.array(labels_data)
+        return img_data, np.array(labels_data), np.array(img.shape).reshape([1, 3])
 
 
 if __name__ == "__main__":

@@ -79,18 +79,17 @@ class CTPN(object):
                                 weights_initializer=tf.truncated_normal_initializer(0.0, stddev=stddev),
                                 weights_regularizer=slim.l2_regularizer(weight_decay),
                                 activation_fn=tf.nn.relu):
-                inputs_img_tensor = tf.placeholder(tf.float32, shape=[None, None, None, 3])
 
                 if cfg["BACKBONE"] == "InceptionNet":
-                    features = inception_base(inputs_img_tensor)
+                    features, featuremap_scale = inception_base(self.img_input)
                 elif cfg["BACKBONE"] == "VggNet":
-                    features = vgg_base(inputs_img_tensor)
+                    features, featuremap_scale = vgg_base(self.img_input)
                 else:
                     assert 0, "error: backbone {} is not support!".format(cfg["BACKBONE"])
 
                 features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
                 features_channel = tf.shape(features)[-1]
-                features = self.__bilstm(features, features_channel, 128, features_channel)
+                features = self.__bilstm(features, 512, 128, 512)
 
                 # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
                 proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
@@ -155,13 +154,12 @@ class CTPN(object):
             shape = tf.shape(input)
             N, H, W, C = shape[0], shape[1], shape[2], shape[3]
             img = tf.reshape(input, [N * H, W, C])
-            # print('dididididi',d_i)
             img.set_shape([None, None, d_i])
 
             lstm_fw_cell = tf.contrib.rnn.LSTMCell(d_h, state_is_tuple=True)
             lstm_bw_cell = tf.contrib.rnn.LSTMCell(d_h, state_is_tuple=True)
 
-            lstm_out, last_state = tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell, img, dtype=tf.float32)
+            lstm_out, last_state = tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell, lstm_bw_cell, img, dtype=tf.float32)
             lstm_out = tf.concat(lstm_out, axis=-1)
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2*d_h])
