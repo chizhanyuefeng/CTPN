@@ -63,6 +63,19 @@ class CTPN(object):
 
         return total_loss, model_loss, rpn_cross_entropy, rpn_loss_box
 
+    def load(self, data_path, session, ignore_missing=False):
+        data_dict = np.load(data_path, encoding='latin1').item()
+        for key in data_dict:
+            with tf.variable_scope("CTPN_Network/" + key, reuse=True):
+                for subkey in data_dict[key]:
+                    try:
+                        var = tf.get_variable(subkey)
+                        session.run(var.assign(data_dict[key][subkey]))
+                        print("assign pretrain model "+subkey+ " to "+key)
+                    except ValueError:
+                        print("ignore "+key)
+                        if not ignore_missing:
+                            raise
 
     def __ctpn_base(self):
         """
@@ -122,10 +135,10 @@ class CTPN(object):
 
     def __anchor_layer(self, proposal_cls_score):
         with tf.variable_scope("anchor_layer"):
-            # 'rpn_cls_score', 'gt_boxes', 'gt_ishard', 'dontcare_areas', 'im_info'
+            # 'rpn_cls_score', 'gt_boxes', 'im_info'
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
                 tf.py_func(anchor_target_layer,
-                           [proposal_cls_score, self.gt_boxes, self.im_info, [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
+                           [proposal_cls_score, self.gt_boxes, self.im_info],
                            [tf.float32, tf.float32, tf.float32, tf.float32])
 
             rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),

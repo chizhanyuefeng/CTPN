@@ -1,5 +1,5 @@
 # BACKBONE : "VggNet", "InceptionNet"
-BACKBONE: "InceptionNet"
+BACKBONE: "VggNet"
 # 16 or 8
 ANCHOR_WIDTH: 16
 ANCHOR_HEIGHT: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
@@ -40,7 +40,7 @@ TRAIN:
   RANDOM_DOWNSAMPLE: False
   MODEL_OUTPUT_DIR: "./model_output/"
   LOGS_DIR: "./logs/"
-  PRETRAIN_MODEL: None
+  PRETRAIN_MODEL: "./models/pretrain_model/VGG_imagenet.npy"
   TRAIN_IMG_DIR: "./train_image/"
   TRAIN_LABEL_DIR: "./train_label/"
   SOLVER: "Adam"

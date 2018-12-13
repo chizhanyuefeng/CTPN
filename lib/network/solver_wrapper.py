@@ -17,12 +17,11 @@ class SloverWrapper(object):
         # self.logs_dir = cfg["TRAIN"]["LOGS_DIR"]
         self.pretrain_model = cfg["TRAIN"]["PRETRAIN_MODEL"]
 
-
         self.writer = tf.summary.FileWriter(logdir=cfg["TRAIN"]["LOGS_DIR"],
                                             graph=tf.get_default_graph(),
                                             flush_secs=5)
 
-        self.train_logger = self.train_logger_init()
+        self.train_logger = self._train_logger_init()
 
     def train_model(self):
 
@@ -60,6 +59,8 @@ class SloverWrapper(object):
         self.sess.run(tf.global_variables_initializer())
         restore_iter = 0
 
+        self.network.load(cfg["TRAIN"]["PRETRAIN_MODEL"], self.sess, True)
+
         # resuming a trainer
         if cfg["TRAIN"]["RESTORE"]:
             try:
@@ -73,7 +74,6 @@ class SloverWrapper(object):
             except:
                 raise 'Check your pretrained {:s}'.format(ckpt.model_checkpoint_path)
 
-        last_snapshot_iter = -1
         start_time = time.time()
         for iter in range(restore_iter, cfg["TRAIN"]["MAX_STEPS"]):
             # learning rate
@@ -103,10 +103,11 @@ class SloverWrapper(object):
             if (iter+1) % cfg["TRAIN"]["SNAPSHOT_ITERS"] == 0:
                 if not os.path.exists(self.model_output_dir):
                     os.makedirs(self.model_output_dir)
-                self.saver.save(self.sess, self.model_output_dir)
+                file_name = "CTPN_{}_iter_{}.ckpt".format(cfg["BACKBONE"], iter)
+                self.saver.save(self.sess, os.path.join(self.model_output_dir, file_name))
                 print('Wrote snapshot to: {:s}'.format(self.model_output_dir))
 
-    def train_logger_init(self):
+    def _train_logger_init(self):
         """
         初始化log日志
         :return:
