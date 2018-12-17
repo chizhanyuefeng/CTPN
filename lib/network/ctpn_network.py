@@ -126,7 +126,7 @@ class CTPN(object):
         """
         with tf.variable_scope("proposal_layer"):
             blob, bbox_delta = tf.py_func(proposal_layer,
-                                          [proposal_cls_prob, proposal_predicted, self.im_info, "TEST", [cfg["ANCHOR_WIDTH"], ], [cfg["ANCHOR_WIDTH"]]],
+                                          [proposal_cls_prob, proposal_predicted, self.im_info, [cfg["ANCHOR_WIDTH"], ]],
                                           [tf.float32, tf.float32])
 
             rpn_rois = tf.reshape(blob, [-1, 5], name='rpn_rois')
