@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 from lib.utils.config import cfg
-from lib.dataset.img_utils import img_normailize
+from lib.dataset.img_utils import img_normailize, resize_img
 
 class Dataload(object):
 
@@ -26,6 +26,7 @@ class Dataload(object):
     def getbatch(self):
         img = cv2.imread(os.path.join(self.img_dir, self.img_path_list[self.current_index]))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img, ratio = resize_img(img)
         img = img_normailize(img)
         h, w, c = img.shape
         # print(img.shape)
