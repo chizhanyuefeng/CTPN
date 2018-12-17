@@ -103,7 +103,7 @@ class SloverWrapper(object):
             if (iter+1) % cfg["TRAIN"]["SNAPSHOT_ITERS"] == 0:
                 if not os.path.exists(self.model_output_dir):
                     os.makedirs(self.model_output_dir)
-                file_name = "CTPN_{}_iter_{}.ckpt".format(cfg["BACKBONE"], iter)
+                file_name = "CTPN_{}_iter_{}.ckpt".format(cfg["BACKBONE"], iter+1)
                 self.saver.save(self.sess, os.path.join(self.model_output_dir, file_name))
                 print('Wrote snapshot to: {:s}'.format(self.model_output_dir))
 
