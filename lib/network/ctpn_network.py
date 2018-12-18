@@ -21,7 +21,7 @@ class CTPN(object):
         proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
         rpn_rois, rpn_targets = self.__proposal_layer(proposal_cls_prob, proposal_predicted)
 
-        return rpn_rois
+        return rpn_rois, rpn_targets
 
     def build_loss(self):
 
