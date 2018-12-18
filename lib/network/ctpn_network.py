@@ -102,7 +102,11 @@ class CTPN(object):
 
                 features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
                 features_channel = tf.shape(features)[-1]
-                features = self.__bilstm(features, 512, 128, 512)
+
+                if cfg["USE_LSTM"]:
+                    features = self.__bilstm(features, 512, 128, 512)
+                else:
+                    features = self.__semantic_info_extract_layer(features)
 
                 # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
                 proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
@@ -181,6 +185,29 @@ class CTPN(object):
             outputs = tf.reshape(outputs, [N, H, W, d_o])
 
             return outputs
+
+    def __semantic_info_extract_layer(self, input, name="semantic_extract_layer"):
+        """
+        使用inception 模块来代替 lstm 提取语义信息
+        :param input:
+        :param name:
+        :return:
+        """
+        with tf.variable_scope(name):
+            with tf.variable_scope('Branch_0'):
+                branch_0 = slim.conv2d(input, 128, [1, 1], scope='Conv2d_b0_1x1')
+            with tf.variable_scope('Branch_1'):
+                branch_1 = slim.conv2d(input, 128, [1, 1], scope='Conv2d_b1_1x1')
+                branch_1 = slim.conv2d(branch_1, 128, [1, 3], scope='Conv2d_b1_5x5')
+            with tf.variable_scope('Branch_2'):
+                branch_2 = slim.conv2d(input, 128, [1, 1], scope='Conv2d_b2_1x1')
+                branch_2 = slim.conv2d(branch_2, 128, [1, 5], scope='Conv2d_b2_0_3x3')
+            with tf.variable_scope('Branch_3'):
+                branch_3 = slim.avg_pool2d(input, [3, 3], stride=1, padding='SAME', scope='AvgPool_b3_3x3')
+                branch_3 = slim.conv2d(branch_3, 128, [1, 7], scope='Conv2d_b3_1x1')
+            outputs = tf.concat([branch_0, branch_1, branch_2, branch_3], axis=3, name='concat')
+
+        return outputs
 
     def __smooth_l1_dist(self, deltas, sigma2=9.0, name='smooth_l1_dist'):
         with tf.name_scope(name=name):
