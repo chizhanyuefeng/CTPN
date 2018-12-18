@@ -46,4 +46,4 @@ class TextConnector:
             index += 1
         # LINE_MIN_SCORE合成的矩形框得分
         return np.where((widths / heights > cfg["TEXT"]["MIN_RATIO"]) & (scores > cfg["TEXT"]["LINE_MIN_SCORE"]) &
-                        (widths > (cfg["TEXT"]["TEXT_PROPOSALS_WIDTH"] * cfg["TEXT"]["MIN_NUM_PROPOSALS"])))[0]
+                        (widths > (cfg["ANCHOR_WIDTH"] * cfg["TEXT"]["MIN_NUM_PROPOSALS"])))[0]
