@@ -80,7 +80,7 @@ class CTPN(object):
     def __ctpn_base(self):
         """
         特征提取层 feature extract layer
-        :return: proposal_predicted : shape = [1, h, w, A*2]
+        :return: proposal_predicted : shape = [1, h, w, A*4
                  proposal_cls_score: shape = [1, h, w, A*cfg["CLASSES_NUM"]]
                  proposal_cls_prob: shape = [1, h, w, A*cfg["CLASSES_NUM"]]
         """
@@ -95,10 +95,13 @@ class CTPN(object):
 
                 if cfg["BACKBONE"] == "InceptionNet":
                     features, featuremap_scale = inception_base(self.img_input)
+
                 elif cfg["BACKBONE"] == "VggNet":
                     features, featuremap_scale = vgg_base(self.img_input)
                 else:
                     assert 0, "error: backbone {} is not support!".format(cfg["BACKBONE"])
+
+                print("using {} backbone...".format(cfg["BACKBONE"]))
 
                 features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
                 features_channel = tf.shape(features)[-1]
@@ -107,6 +110,7 @@ class CTPN(object):
                     features = self.__bilstm(features, 512, 128, 512)
                 else:
                     features = self.__semantic_info_extract_layer(features)
+                print('Lstm is using?', cfg["USE_LSTM"])
 
                 # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
                 proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
@@ -124,7 +128,7 @@ class CTPN(object):
         """
         回归proposal框
         :param proposal_cls_prob: shape = [1, h, w, Axclass_num]
-        :param proposal_predicted: shape = [1, h, w, Ax2] TODO:回归2个值
+        :param proposal_predicted: shape = [1, h, w, Ax4] TODO:回归2个值
         :return rpn_rois : shape = [1 x H x W x A, 5]
                 rpn_targets : shape = [1 x H x W x A, 2]
         """
