@@ -103,6 +103,18 @@ class SloverWrapper(object):
             if (iter+1) % cfg["TRAIN"]["SNAPSHOT_ITERS"] == 0:
                 if not os.path.exists(self.model_output_dir):
                     os.makedirs(self.model_output_dir)
+                # with tf.variable_scope('bbox_pred', reuse=True):
+                #     weights = tf.get_variable("weights")
+                #     biases = tf.get_variable("biases")
+                #
+                # orig_0 = weights.eval()
+                # orig_1 = biases.eval()
+                #
+                # # scale and shift with bbox reg unnormalization; then save snapshot
+                # weights_shape = weights.get_shape().as_list()
+                # self.sess.run(weights.assign(orig_0 * np.tile(self.bbox_stds, (weights_shape[0], 1))))
+                # self.sess.run(biases.assign(orig_1 * self.bbox_stds + self.bbox_means))
+
                 file_name = "CTPN_{}_iter_{}.ckpt".format(cfg["BACKBONE"], iter+1)
                 self.saver.save(self.sess, os.path.join(self.model_output_dir, file_name))
                 print('Wrote snapshot to: {:s}'.format(self.model_output_dir))

@@ -1,13 +1,12 @@
 # -*- coding:utf-8 -*-
 import numpy as np
+import time
 from lib.rpn_layer.generate_anchors import generate_anchors
 
 from lib.utils.config import cfg
 from lib.bbox_utils.bbox_transform import bbox_transform_inv, clip_boxes
 from lib.nms.nms_wrapper import nms, py_cpu_nms
 
-
-DEBUG = False
 """
 Outputs object detection proposals by applying estimated bounding-box
 transformations to a set of regular boxes (called "anchors").
@@ -53,6 +52,7 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     #  [0  -62   15   77]
     #  [0  -91   15  106]
     #  [0 -134   15  149]]
+
     _anchors = generate_anchors()#生成基本的10个anchor
     _num_anchors = _anchors.shape[0]#10个anchor
 
@@ -129,7 +129,12 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     proposals = proposals[keep, :]#保留剩下的proposal
     scores = scores[keep]
     bbox_deltas=bbox_deltas[keep, :]
-
+    print('proposals1', proposals.shape)
+    score_filter = np.where(scores > 0.5)[0]
+    proposals = proposals[score_filter, :]
+    scores = scores[score_filter]
+    bbox_deltas = bbox_deltas[score_filter, :]
+    print('proposals2', proposals.shape)
     # remove irregular boxes, too fat too tall
     # keep = _filter_irregular_boxes(proposals)
     # proposals = proposals[keep, :]
@@ -140,14 +145,19 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     order = scores.ravel().argsort()[::-1]#score按得分的高低进行排序
     if pre_nms_topN > 0:                #保留12000个proposal进去做nms
         order = order[:pre_nms_topN]
+    # print('proposals3', proposals.shape)
     proposals = proposals[order, :]
     scores = scores[order]
     bbox_deltas=bbox_deltas[order,:]
+    print('proposals3', proposals.shape)
+    s = time.time()
 
     # 6. apply nms (e.g. threshold = 0.7)
     # 7. take after_nms_topN (e.g. 300)
     # 8. return the top proposals (-> RoIs top)
+
     keep = nms(np.hstack((proposals, scores)), nms_thresh)#进行nms操作，保留2000个proposal
+    print(time.time()-s)
     if post_nms_topN > 0:
         keep = keep[:post_nms_topN]
     proposals = proposals[keep, :]

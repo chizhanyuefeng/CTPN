@@ -28,7 +28,6 @@ class TextConnector:
         keep_inds = nms(np.hstack((text_proposals, scores)), cfg["TEXT"]["TEXT_PROPOSALS_NMS_THRESH"])
         # keep_inds = soft_nms(np.hstack((text_proposals, scores)),threshold=TextLineCfg.TEXT_PROPOSALS_NMS_THRESH)
         text_proposals, scores = text_proposals[keep_inds], scores[keep_inds]
-
         # 获取检测结果
         text_recs = self.text_proposal_connector.get_text_lines(text_proposals, scores, size)
         keep_inds = self.filter_boxes(text_recs)

@@ -1,10 +1,10 @@
 import numpy as np
 from lib.utils.config import cfg
-pure_python_nms = False
+pure_python_nms = True
 
 try:
-    from lib.utils.gpu_nms import gpu_nms
-    from ..utils.cython_nms import nms as cython_nms
+    #from lib.nms.gpu_nms import gpu_nms
+    from lib.nms.cython_nms import nms as cython_nms
     from lib.nms.cpu_nms import cpu_nms
 except ImportError:
     pure_python_nms = True

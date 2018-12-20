@@ -7,8 +7,8 @@ from lib.dataset.parse_xml import ParseXml
 from lib.utils.config import cfg
 from lib.dataset.img_utils import resize_img
 
-train_img_dir = "/workspace/ocr_dataset/ctpn_v2/img"
-train_xml_dir = "/workspace/ocr_dataset/ctpn_v2/xml"
+train_img_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v1/img"
+train_xml_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v1/xml"
 
 val_img_dir = "/home/tony/ocr/ocr_dataset/ctpn/val_data/img"
 val_xml_dir = "/home/tony/ocr/ocr_dataset/ctpn/val_data/xml"
@@ -31,7 +31,7 @@ files.sort()
 
 for file in files:
     _, basename = os.path.split(file)
-    if basename.lower().split('.')[-1] not in ['jpg', 'png', 'JPG', 'JPEG']:
+    if basename.lower().split('.')[-1] not in ['jpg', 'png', 'JPG', 'JPEG', 'jpeg']:
        print(basename.lower().split('.')[-1])
        continue
     stem, ext = os.path.splitext(basename)
@@ -111,7 +111,8 @@ for file in files:
             os.makedirs(label_temp_dir)
 
         if class_list[bbox_index] <= 1:
-            current_class = class_name[class_list[bbox_index] + 1]
+            # print(class_name)
+            current_class = class_name[1]
         else:
             assert 0, '不该出现其他类型的class:{}'.format(class_list[bbox_index])
 
