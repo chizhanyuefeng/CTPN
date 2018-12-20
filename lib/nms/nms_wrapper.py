@@ -2,15 +2,15 @@ import numpy as np
 from lib.utils.config import cfg
 pure_python_nms = True
 
-try:
-    #from lib.nms.gpu_nms import gpu_nms
-    from lib.nms.cython_nms import nms as cython_nms
-    from lib.nms.cpu_nms import cpu_nms
-except ImportError:
-    pure_python_nms = True
+# try:
+#     from lib.nms.gpu_nms import gpu_nms
+#     from lib.nms.cython_nms import nms as cython_nms
+#     from lib.nms.cpu_nms import cpu_nms
+# except ImportError:
+#     pure_python_nms = True
 
 
-#from lib.nms.gpu_nms import gpu_nms
+# from lib.nms.gpu_nms import gpu_nms
 
 # from lib.nms.cpu_nms import cpu_nms
 
@@ -29,10 +29,10 @@ def nms(dets, thresh):
     if pure_python_nms:
         # print("Fall back to pure python nms")
         return py_cpu_nms(dets, thresh)
-    if cfg["USE_GPU_NMS"]:
-        return gpu_nms(dets, thresh, device_id=0)
-    else:
-        return cython_nms(dets, thresh)
+    # if cfg["USE_GPU_NMS"]:
+    #     return gpu_nms(dets, thresh, device_id=0)
+    # else:
+    #     return cython_nms(dets, thresh)
 
 def py_cpu_nms(dets, thresh):
     x1 = dets[:, 0]

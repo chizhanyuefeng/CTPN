@@ -75,16 +75,16 @@ class custom_build_ext(build_ext):
 ext_modules = [
     Extension(
         "bbox",
-        ["bbox.pyx"],
+        ["./bbox.pyx"],
         extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
         include_dirs = [numpy_include]
     ),
-    Extension(
-        "cython_nms",
-        ["cython_nms.pyx"],
-        extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
-        include_dirs = [numpy_include]
-    ),
+    # Extension(
+    #     "cython_nms",
+    #     ["./nms/cython_nms.pyx"],
+    #     extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
+    #     include_dirs = [numpy_include]
+    # ),
     # Extension('gpu_nms',
     #     ['nms_kernel.cu', 'gpu_nms.pyx'],
     #     library_dirs=[CUDA['lib64']],
