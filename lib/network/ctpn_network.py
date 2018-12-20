@@ -34,7 +34,7 @@ class CTPN(object):
         rpn_bbox_outside_weights = self.__anchor_layer(proposal_cls_score)
 
         # classification loss
-        rpn_cls_score = tf.reshape(proposal_cls_prob, [-1, 2])  # shape (HxWxA, 2)
+        rpn_cls_score = tf.reshape(proposal_cls_score, [-1, 2])  # shape (HxWxA, 2)
         rpn_label = tf.reshape(rpn_labels, [-1])  # shape (HxWxA)
         # ignore_label(-1)
         fg_keep = tf.equal(rpn_label, 1)
