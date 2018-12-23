@@ -14,11 +14,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     ----------
     rpn_cls_score: (1, H, W, Ax2) bg/fg scores of previous conv layer
     gt_boxes: (G, 5) vstack of [x1, y1, x2, y2, class]
-    gt_ishard: (G, 1), 1 or 0 indicates difficult or not
-    dontcare_areas: (D, 4), some areas may contains small objs but no labelling. D may be 0
     im_info: a list of [image_height, image_width, scale_ratios]
     _feat_stride: the downsampling ratio of feature map to the original input image
-    anchor_scales: the scales to the basic_anchor (basic anchor is [16, 16])
     ----------
     Returns
     ----------
@@ -34,8 +31,6 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
 
     # allow boxes to sit over the edge by a small amount
     _allowed_border = 0
-    # map of shape (..., H, W)
-    # height, width = rpn_cls_score.shape[1:3]
 
     im_info = im_info[0]  # 图像的高宽及通道数
 
@@ -182,12 +177,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     # bbox_targets
     bbox_targets = bbox_targets \
         .reshape((1, height, width, A * 4))
-
     rpn_bbox_targets = bbox_targets
+
     # bbox_inside_weights
     bbox_inside_weights = bbox_inside_weights \
         .reshape((1, height, width, A * 4))
-
     rpn_bbox_inside_weights = bbox_inside_weights
 
     # bbox_outside_weights
