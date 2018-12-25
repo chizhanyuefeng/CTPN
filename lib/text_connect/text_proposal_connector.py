@@ -19,8 +19,9 @@ class TextProposalConnector:
         return p(x1), p(x2)
 
     def get_text_lines(self, text_proposals, scores, im_size):
-        # tp=text proposal
+        # 构建图结构
         tp_groups=self.group_text_proposals(text_proposals, scores, im_size)
+
         text_lines=np.zeros((len(tp_groups), 5), np.float32)
 
         for index, tp_indices in enumerate(tp_groups):
@@ -34,8 +35,7 @@ class TextProposalConnector:
             lt_y, rt_y=self.fit_y(text_line_boxes[:, 0], text_line_boxes[:, 1], x0+offset, x1-offset)
             lb_y, rb_y=self.fit_y(text_line_boxes[:, 0], text_line_boxes[:, 3], x0+offset, x1-offset)
 
-            # the score of a text line is the average score of the scores
-            # of all text proposals contained in the text line
+            # 组成文本行的所有proposal得分均值
             score=scores[list(tp_indices)].sum()/float(len(tp_indices))
 
             text_lines[index, 0]=x0

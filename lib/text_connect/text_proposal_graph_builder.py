@@ -10,9 +10,11 @@ class TextProposalGraphBuilder:
     def get_successions(self, index):
             box=self.text_proposals[index]
             results=[]
-            for left in range(int(box[0])+1, min(int(box[0])+cfg["TEXT"]["MAX_HORIZONTAL_GAP"]+1, self.im_size[1])):
-                adj_box_indices=self.boxes_table[left]
+            # 向右找
+            for right in range(int(box[0])+1, min(int(box[0])+cfg["TEXT"]["MAX_HORIZONTAL_GAP"]+1, self.im_size[1])):
+                adj_box_indices=self.boxes_table[right]
                 for adj_box_index in adj_box_indices:
+                    # 判断垂直iou
                     if self.meet_v_iou(adj_box_index, index):
                         results.append(adj_box_index)
                 if len(results)!=0:
@@ -59,17 +61,20 @@ class TextProposalGraphBuilder:
         self.im_size=im_size
         self.heights=text_proposals[:, 3]-text_proposals[:, 1]+1
 
+        # 根据图像的宽度构建boxes_table，即proposal的x坐标
         boxes_table=[[] for _ in range(self.im_size[1])]
         for index, box in enumerate(text_proposals):
             boxes_table[int(box[0])].append(index)
         self.boxes_table=boxes_table
 
+        # 构建图[proposal num, proposal num]
         graph=np.zeros((text_proposals.shape[0], text_proposals.shape[0]), np.bool)
 
         for index, box in enumerate(text_proposals):
             successions=self.get_successions(index)
             if len(successions)==0:
                 continue
+            # 找到得分最大的proposal
             succession_index=successions[np.argmax(scores[successions])]
             if self.is_succession_node(index, succession_index):
                 # NOTE: a box can have multiple successions(precursors) if multiple successions(precursors)

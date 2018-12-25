@@ -8,10 +8,10 @@ from lib.text_connect.text_proposal_connector_oriented import TextProposalConnec
 class TextConnector:
     def __init__(self):
         self.mode = cfg["TEXT"]["DETECT_MODE"]
-        if self.mode == "H":
-            self.text_proposal_connector = TextProposalConnector()
-        elif self.mode == "O":
-            self.text_proposal_connector = TextProposalConnectorOriented()
+        # if self.mode == "H":
+        self.text_proposal_connector = TextProposalConnector()
+        # elif self.mode == "O":
+        #     self.text_proposal_connector = TextProposalConnectorOriented()
 
     def detect(self, text_proposals, scores, size):
         # 删除得分较低的proposal

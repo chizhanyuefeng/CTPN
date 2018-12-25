@@ -112,10 +112,17 @@ class CTPN(object):
                     features = self.__semantic_info_extract_layer(features)
                 print('Lstm is using?', cfg["USE_LSTM"])
 
+                features_shape = tf.shape(features)
                 # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
-                proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
+                # proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1')
+                # features_reshape = tf.reshape(features, [features_shape[0] * features_shape[1] * features_shape[2], features_shape[3]])
+                outputs = slim.fully_connected(features, len(cfg["ANCHOR_HEIGHT"]) * 4)
+                proposal_predicted = tf.reshape(outputs, [features_shape[0], features_shape[1], features_shape[2], len(cfg["ANCHOR_HEIGHT"]) * 4])
                 # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
-                proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1')
+                # proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1')
+                outputs = slim.fully_connected(features, len(cfg["ANCHOR_HEIGHT"]) * 2)
+                proposal_cls_score = tf.reshape(outputs, [features_shape[0], features_shape[1], features_shape[2],
+                                                          len(cfg["ANCHOR_HEIGHT"]) * 2])
                 proposal_cls_score_shape = tf.shape(proposal_cls_score)
                 # proposal_cls_score_reshape shape = [h*w*A, cfg["CLASSES_NUM"]]
                 proposal_cls_score_reshape = tf.reshape(proposal_cls_score, [-1, cfg["CLASSES_NUM"]])
@@ -184,7 +191,6 @@ class CTPN(object):
             lstm_out = tf.concat(lstm_out, axis=-1)
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2*d_h])
-
             outputs = slim.fully_connected(lstm_out, d_o)
             outputs = tf.reshape(outputs, [N, H, W, d_o])
 

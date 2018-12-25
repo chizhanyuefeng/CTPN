@@ -20,6 +20,7 @@ class Graph:
     def sub_graphs_connected(self):
         sub_graphs=[]
         for index in range(self.graph.shape[0]):
+            # 找属于同一行的proposal加到合并的list中
             if not self.graph[:, index].any() and self.graph[index, :].any():
                 v=index
                 sub_graphs.append([v])
