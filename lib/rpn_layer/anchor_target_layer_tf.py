@@ -26,6 +26,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     rpn_bbox_outside_weights: (HxWxA, 4) used to balance the fg/bg,
                             beacuse the numbers of bgs and fgs mays significiantly different
     """
+    # print(gt_boxes)
     _anchors = generate_anchors()  # 生成基本的anchor,一共10个
     _num_anchors = _anchors.shape[0]  # 10个anchor
 
@@ -47,6 +48,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
 
     # map of shape (..., H, W)
     height, width = rpn_cls_score.shape[1:3]  # feature-map的高宽
+    # print('feature shape:', height, width)
 
     # 1. Generate proposals from bbox deltas and shifted anchors
     shift_x = np.arange(0, width) * _feat_stride
@@ -64,6 +66,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     all_anchors = (_anchors.reshape((1, A, 4)) +
                    shifts.reshape((1, K, 4)).transpose((1, 0, 2)))  # 相当于复制宽高的维度，然后相加
     all_anchors = all_anchors.reshape((K * A, 4))
+    # print(all_anchors)
     total_anchors = int(K * A)
 
     # only keep anchors inside the image
@@ -74,7 +77,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
         (all_anchors[:, 2] < im_info[1] + _allowed_border) &  # width
         (all_anchors[:, 3] < im_info[0] + _allowed_border)    # height
     )[0]
-
+    # print(inds_inside)
     # keep only inside anchors
     anchors = all_anchors[inds_inside, :]  # 保留那些在图像内的anchor
 
