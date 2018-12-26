@@ -185,7 +185,7 @@ class CTPN(object):
             lstm_out = tf.concat(lstm_out, axis=-1)
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2*d_h])
-            outputs = slim.fully_connected(lstm_out, d_o, activation_fn=None)]
+            outputs = slim.fully_connected(lstm_out, d_o, activation_fn=None)
             outputs = tf.reshape(outputs, [N, H, W, d_o])
 
             return outputs
