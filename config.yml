@@ -15,18 +15,16 @@ USE_LSTM: True
 TRAIN:
   RESTORE: 0
   MAX_STEPS: 100000
-  SOLVER: Adam
+  MODEL_SAVE_ITERS: 10000
+  LEARING_RATE_ITERS: 20000
+  LEARNING_RATE: 0.00001
+  DISPLAY: 10
   OHEM: False
   RPN_BATCHSIZE: 300
   BATCH_SIZE: 300
   LOG_IMAGE_ITERS: 100
-  DISPLAY: 10
-  SNAPSHOT_ITERS: 2000
-  HAS_RPN: True
-  LEARNING_RATE: 0.00001
   GAMMA: 0.1
   MOMENTUM: 0.9
-  STEPSIZE: 50000
   IMS_PER_BATCH: 1
   BBOX_NORMALIZE_TARGETS_PRECOMPUTED: True
   RPN_POSITIVE_OVERLAP: 0.7
@@ -40,18 +38,18 @@ TRAIN:
   FG_FRACTION: 0.3
   WEIGHT_DECAY: 0.0005
   RANDOM_DOWNSAMPLE: False
-  MODEL_OUTPUT_DIR: "./model_output/"
+  MODEL_OUTPUT_DIR: "./models/train_output/"
   LOGS_DIR: "./logs/"
   PRETRAIN_MODEL: "./models/pretrain_model/VGG_imagenet.npy"
-  TRAIN_IMG_DIR: "./10pic/train_image/"
-  TRAIN_LABEL_DIR: "./10pic/train_label/"
+  TRAIN_IMG_DIR: "./train_image/"
+  TRAIN_LABEL_DIR: "./train_label/"
   SOLVER: "Adam"
   RPN_CLOBBER_POSITIVES: False
   RPN_FG_FRACTION: 0.5
 
 TEST:
   DETECT_MODE: H
-  CHECKPOINTS_PATH: ./models/checkpoints
+  CHECKPOINTS_PATH: ./model_output/
   # checkpoints_path: output/ctpn_end2end/voc_2007_trainval
   # 在做nms之前，最多保留的候选box数目
   RPN_PRE_NMS_TOP_N: 12000
