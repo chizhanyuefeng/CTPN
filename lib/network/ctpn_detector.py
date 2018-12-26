@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from lib.utils.config import cfg
 from lib.network.ctpn_network import CTPN
-from lib.dataset.img_utils import resize_img
+from lib.dataset.img_utils import resize_img, img_normailize
 from lib.text_connect.text_connector import TextConnector
 
 
@@ -31,7 +31,7 @@ class CtpnDetector(object):
 
     def detect(self, img):
         img, scale = resize_img(img)
-
+        img = img_normailize(img)
         h, w, c = img.shape
         img_input = np.reshape(img, [1, h, w, c])
         img_info = [h, w, 1]
