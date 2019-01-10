@@ -106,7 +106,7 @@ class SloverWrapper(object):
 
                 file_name = "CTPN_{}_iter_{}.ckpt".format(cfg["BACKBONE"], iter+1)
                 self.saver.save(self.sess, os.path.join(self.model_output_dir, file_name))
-                print('Save model {} at: {:s}'.format(file_name,self.model_output_dir))
+                print('Save model {} at: {:s}'.format(file_name, self.model_output_dir))
 
     def _train_logger_init(self):
         """

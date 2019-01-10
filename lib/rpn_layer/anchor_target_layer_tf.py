@@ -77,7 +77,6 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
         (all_anchors[:, 2] < im_info[1] + _allowed_border) &  # width
         (all_anchors[:, 3] < im_info[0] + _allowed_border)    # height
     )[0]
-    # print(inds_inside)
     # keep only inside anchors
     anchors = all_anchors[inds_inside, :]  # 保留那些在图像内的anchor
 
@@ -95,9 +94,9 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
         np.ascontiguousarray(anchors, dtype=np.float),
         np.ascontiguousarray(gt_boxes, dtype=np.float))  # 假设anchors有x个，gt_boxes有y个，返回的是一个（x,y）的数组
     # 存放每一个anchor和每一个gtbox之间的overlap
-    argmax_overlaps = overlaps.argmax(axis=1)  # (A)#找到和每一个gtbox，overlap最大的那个anchor
+    argmax_overlaps = overlaps.argmax(axis=1)  # 找到和每一个gtbox，overlap最大的那个anchor
     max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
-    gt_argmax_overlaps = overlaps.argmax(axis=0)  # G#找到每个位置上9个anchor中与gtbox，overlap最大的那个
+    gt_argmax_overlaps = overlaps.argmax(axis=0)  # 找到每个位置上10个anchor中与gtbox，overlap最大的那个
     gt_max_overlaps = overlaps[gt_argmax_overlaps,
                                np.arange(overlaps.shape[1])]
     gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
