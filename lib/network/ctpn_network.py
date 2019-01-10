@@ -6,7 +6,6 @@ from tensorflow.python import pywrap_tensorflow
 from lib.utils.config import cfg
 from lib.network.inception_base import inception_base
 from lib.network.vgg_base import vgg_base
-from lib.rpn_layer.generate_anchors import generate_anchors
 from lib.rpn_layer.anchor_target_layer_tf import anchor_target_layer
 from lib.rpn_layer.proposal_layer_tf import proposal_layer
 
@@ -87,6 +86,9 @@ class CTPN(object):
         stddev = 0.01
         weight_decay = cfg["TRAIN"]["WEIGHT_DECAY"]
 
+        assert cfg["ANCHOR_WIDTH"] == 8 or cfg["ANCHOR_WIDTH"] == 16, \
+            'Anchor must be 8 or 16!Not be {}.'.format(cfg["ANCHOR_WIDTH"])
+
         with tf.variable_scope("CTPN_Network"):
             with slim.arg_scope([slim.conv2d, slim.fully_connected],
                                 weights_initializer=tf.truncated_normal_initializer(0.0, stddev=stddev),
@@ -104,7 +106,6 @@ class CTPN(object):
                 print("using {} backbone...".format(cfg["BACKBONE"]))
 
                 features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
-                features_channel = tf.shape(features)[-1]
 
                 if cfg["USE_LSTM"]:
                     features = self.__bilstm(features, 512, 128, 512)
