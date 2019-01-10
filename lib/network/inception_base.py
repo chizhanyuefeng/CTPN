@@ -16,15 +16,24 @@ def inception_base(inputs, scope=None):
     net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool2')
     featuremap_scale *= 2
 
+    net = slim.conv2d(net, 256, [3, 3], scope='conv3_1')
+    net = slim.conv2d(net, 256, [3, 3], scope='conv3_2')
+    net = slim.conv2d(net, 256, [3, 3], scope='conv3_3')
+    net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool3')
+
+    net = slim.conv2d(net, 512, [3, 3], scope='conv4_1')
+    net = slim.conv2d(net, 512, [3, 3], scope='conv4_2')
+    net = slim.conv2d(net, 512, [3, 3], scope='conv4_3')
+
     if featuremap_scale*2 != cfg["ANCHOR_WIDTH"]:
-        net = slim.conv2d(net, 256, [3, 3], scope='conv3_1')
-        net = slim.conv2d(net, 256, [3, 3], scope='conv3_2')
-        net = slim.conv2d(net, 256, [3, 3], scope='conv3_3')
-        net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool3')
+        net = slim.conv2d(net, 512, [3, 3], scope='conv5_1')
+        net = slim.conv2d(net, 512, [3, 3], scope='conv5_2')
+        net = slim.conv2d(net, 512, [3, 3], scope='conv5_3')
+        net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool5')
         featuremap_scale *= 2
 
     net = _inception_module(net)
-    net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool2')
+    net = slim.max_pool2d(net, [2, 2], stride=2, padding='VALID', scope='pool6')
     featuremap_scale *= 2
 
     return net, featuremap_scale
@@ -65,10 +74,10 @@ def _inception_module(net, module_index=None):
         with tf.variable_scope('Branch_2'):
             branch_2 = slim.conv2d(net, 128, [1, 1], scope=scope + '/conv2d_b2_1x1')
             branch_2 = slim.conv2d(branch_2, 128, [3, 3], scope=scope + '/conv2d_b2_0_3x3')
-            branch_2 = slim.conv2d(branch_2, 128, [3, 3], scope=scope + '/conv2d_b2_1_3x3')
+            branch_2 = slim.conv2d(branch_2, 128, [1, 5], scope=scope + '/conv2d_b2_1_3x3')
         with tf.variable_scope('Branch_3'):
             branch_3 = slim.avg_pool2d(net, [3, 3], stride=1, padding='SAME', scope=scope + '/avgPool_b3_3x3')
-            branch_3 = slim.conv2d(branch_3, 128, [1, 5], scope=scope + '/conv2d_b3_1x5')
+            branch_3 = slim.conv2d(branch_3, 128, [1, 7], scope=scope + '/conv2d_b3_1x5')
         net = tf.concat([branch_0, branch_1, branch_2, branch_3], axis=3, name=scope + '/concat_m2')
 
     return net
