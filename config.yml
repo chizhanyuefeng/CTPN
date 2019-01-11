@@ -1,5 +1,5 @@
 # BACKBONE : "VggNet", "InceptionNet"
-BACKBONE: "VggNet"
+BACKBONE: "InceptionNet"
 # 16 or 8
 ANCHOR_WIDTH: 16
 ANCHOR_HEIGHT: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
@@ -17,7 +17,8 @@ TRAIN:
   MAX_STEPS: 100000
   MODEL_SAVE_ITERS: 10000
   LEARING_RATE_ITERS: 20000
-  LEARNING_RATE: 0.00001
+  LEARNING_RATE: 0.001
+  MIN_LEARNING_RATE: 0.00001
   DISPLAY: 10
   OHEM: False
   RPN_BATCHSIZE: 300
@@ -49,7 +50,7 @@ TRAIN:
 
 TEST:
   DETECT_MODE: H
-  CHECKPOINTS_PATH: ./model_output/
+  CHECKPOINTS_PATH: ./models/train_output/
   # checkpoints_path: output/ctpn_end2end/voc_2007_trainval
   # 在做nms之前，最多保留的候选box数目
   RPN_PRE_NMS_TOP_N: 12000
@@ -65,7 +66,7 @@ TEXT:
   # PROPOSALS的宽高比
   MIN_RATIO: 0.5
   # 合成后的矩形框得分
-  LINE_MIN_SCORE: 0.7
+  LINE_MIN_SCORE: 0.5
   # 原值50 ,20-30合适
   MAX_HORIZONTAL_GAP: 20
   # 每个PROPOSALS的得分

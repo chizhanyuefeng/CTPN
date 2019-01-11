@@ -78,7 +78,8 @@ class SloverWrapper(object):
         for iter in range(restore_iter, cfg["TRAIN"]["MAX_STEPS"]):
             # learning rate
             if iter != 0 and iter % cfg["TRAIN"]["LEARING_RATE_ITERS"] == 0:
-                self.sess.run(tf.assign(lr, lr.eval() * cfg["TRAIN"]["GAMMA"]))
+                if lr.eval() == cfg["TRAIN"]["MIN_LEARNING_RATE"]:
+                    self.sess.run(tf.assign(lr, lr.eval() * cfg["TRAIN"]["GAMMA"]))
 
             img_input, labels, img_info = train_data_load.getbatch()
             # print(img_input)
