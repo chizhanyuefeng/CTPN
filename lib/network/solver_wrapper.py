@@ -40,14 +40,14 @@ class SloverWrapper(object):
         lr = tf.Variable(cfg["TRAIN"]["LEARNING_RATE"], trainable=False)
         if cfg["TRAIN"]["SOLVER"] == 'Adam':
             opt = tf.train.AdamOptimizer(cfg.TRAIN.LEARNING_RATE)
-        elif cfg.TRAIN.SOLVER == 'RMS':
+        elif cfg["TRAIN"]["SOLVER"] == 'RMS':
             opt = tf.train.RMSPropOptimizer(cfg.TRAIN.LEARNING_RATE)
         else:
-            momentum = cfg.TRAIN.MOMENTUM
+            momentum = cfg["TRAIN"]["MOMENTUM"]
             opt = tf.train.MomentumOptimizer(lr, momentum)
 
         global_step = tf.Variable(0, trainable=False)
-        with_clip = True
+        with_clip = cfg["TRAIN"]["WITH_CLIP"]
         if with_clip:
             tvars = tf.trainable_variables()
             grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
@@ -58,10 +58,13 @@ class SloverWrapper(object):
         # intialize variables
         self.sess.run(tf.global_variables_initializer())
         restore_iter = 0
+        if os.path.exists(cfg["TRAIN"]["PRETRAIN_MODEL"]):
+            self.train_logger.info('load pretrain model from {}'.format(cfg["TRAIN"]["PRETRAIN_MODEL"]))
+            self.network.load(cfg["TRAIN"]["PRETRAIN_MODEL"], self.sess, True)
+        else:
+            self.train_logger.info('no pretrain model to load from :{}'.format(cfg["TRAIN"]["PRETRAIN_MODEL"]))
 
-        self.network.load(cfg["TRAIN"]["PRETRAIN_MODEL"], self.sess, True)
-
-        # resuming a trainer
+        # 恢复训练
         if cfg["TRAIN"]["RESTORE"]:
             try:
                 ckpt = tf.train.get_checkpoint_state(cfg["TRAIN"]["MODEL_OUTPUT_DIR"])
@@ -72,13 +75,13 @@ class SloverWrapper(object):
                 self.sess.run(global_step.assign(restore_iter))
                 self.train_logger.info('done')
             except:
-                raise 'Check your pretrained {:s}'.format(ckpt.model_checkpoint_path)
+                raise 'Check your pretrained {}'.format(ckpt.model_checkpoint_path)
 
         start_time = time.time()
         for iter in range(restore_iter, cfg["TRAIN"]["MAX_STEPS"]):
             # learning rate
             if iter != 0 and iter % cfg["TRAIN"]["LEARING_RATE_ITERS"] == 0:
-                if lr.eval() == cfg["TRAIN"]["MIN_LEARNING_RATE"]:
+                if lr.eval() != cfg["TRAIN"]["MAX_LEARNING_RATE"]:
                     self.sess.run(tf.assign(lr, lr.eval() * cfg["TRAIN"]["GAMMA"]))
 
             img_input, labels, img_info = train_data_load.getbatch()

@@ -27,7 +27,7 @@ class CtpnDetector(object):
             saver.restore(self.sess, ckpt.model_checkpoint_path)
             print('done')
         except:
-            assert 0, 'Check your pretrained {}'.format(ckpt.model_checkpoint_path)
+            assert 0, 'Check your model {}'.format(ckpt.model_checkpoint_path)
 
     def detect(self, img):
         img, scale = resize_img(img)
