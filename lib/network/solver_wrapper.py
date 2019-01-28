@@ -37,11 +37,11 @@ class SloverWrapper(object):
         summary_op = tf.summary.merge_all()
 
         # optimizer
-        lr = tf.Variable(cfg["TRAIN"]["LEARNING_RATE"], trainable=False)
+        lr = tf.Variable(cfg["TRAIN"]["BEGAIN_LEARNING_RATE"], trainable=False)
         if cfg["TRAIN"]["SOLVER"] == 'Adam':
-            opt = tf.train.AdamOptimizer(cfg.TRAIN.LEARNING_RATE)
+            opt = tf.train.AdamOptimizer(cfg["TRAIN"]["BEGAIN_LEARNING_RATE"])
         elif cfg["TRAIN"]["SOLVER"] == 'RMS':
-            opt = tf.train.RMSPropOptimizer(cfg.TRAIN.LEARNING_RATE)
+            opt = tf.train.RMSPropOptimizer(cfg["TRAIN"]["BEGAIN_LEARNING_RATE"])
         else:
             momentum = cfg["TRAIN"]["MOMENTUM"]
             opt = tf.train.MomentumOptimizer(lr, momentum)
@@ -81,7 +81,7 @@ class SloverWrapper(object):
         for iter in range(restore_iter, cfg["TRAIN"]["MAX_STEPS"]):
             # learning rate
             if iter != 0 and iter % cfg["TRAIN"]["LEARING_RATE_ITERS"] == 0:
-                if lr.eval() != cfg["TRAIN"]["MAX_LEARNING_RATE"]:
+                if lr.eval() != cfg["TRAIN"]["MIN_LEARNING_RATE"]:
                     self.sess.run(tf.assign(lr, lr.eval() * cfg["TRAIN"]["GAMMA"]))
 
             img_input, labels, img_info = train_data_load.getbatch()

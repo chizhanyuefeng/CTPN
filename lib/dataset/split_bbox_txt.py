@@ -6,15 +6,14 @@ import cv2 as cv
 # from lib.utils.config import cfg
 from lib.dataset.img_utils import resize_img
 
-train_img_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v7/img"
-train_xml_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v7/txt"
+train_img_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v7/test/img"
+train_xml_dir = "/home/tony/ocr/ocr_dataset/tal_ocr_data_v7/test/txt"
 
 val_img_dir = "/home/tony/ocr/ocr_dataset/ctpn/val_data/img"
 val_xml_dir = "/home/tony/ocr/ocr_dataset/ctpn/val_data/xml"
 
 img_dir = train_img_dir
 xml_dir = train_xml_dir
-
 
 label_temp_dir = 'train_label_tmp'
 out_path = 'train_img_tmp'

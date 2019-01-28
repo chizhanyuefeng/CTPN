@@ -13,7 +13,7 @@ class CTPN(object):
 
     def __init__(self, is_train=False):
         self.img_input = tf.placeholder(tf.float32, shape=[None, None, None, 3], name="img_input")
-        self.im_info = tf.placeholder(tf.float32, shape=[None, 3], name="im_info")
+        self.im_info = tf.placeholder(tf.float32, shape=[None, 3], name="img_info")
 
     def inference(self):
 
@@ -97,15 +97,17 @@ class CTPN(object):
 
                 if cfg["BACKBONE"] == "InceptionNet":
                     features, featuremap_scale = inception_base(self.img_input)
-
                 elif cfg["BACKBONE"] == "VggNet":
                     features, featuremap_scale = vgg_base(self.img_input)
                 else:
                     assert 0, "error: backbone {} is not support!".format(cfg["BACKBONE"])
 
+                print('featuremap_scale is {}, anchor width is {}'.format(featuremap_scale, cfg['ANCHOR_WIDTH']))
+                assert featuremap_scale == cfg['ANCHOR_WIDTH']
+
                 print("using {} backbone...".format(cfg["BACKBONE"]))
 
-                features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
+                features = slim.conv2d(features, 512, [3, 3], activation_fn=None, scope='rpn_conv_3x3')
 
                 if cfg["USE_LSTM"]:
                     features = self.__bilstm(features, 512, 128, 512)
