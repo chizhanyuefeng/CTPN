@@ -31,6 +31,8 @@ class CtpnDetector(object):
 
     def detect(self, img):
         img, scale = resize_img(img)
+        print('shape', img.shape)
+        print('scale', scale)
         img = img_normailize(img)
         h, w, c = img.shape
         img_input = np.reshape(img, [1, h, w, c])
@@ -38,24 +40,23 @@ class CtpnDetector(object):
         s = time.time()
         scores, pp_boxes = self._get_net_output(img_input, img_info)
         print('net:', time.time()-s)
-
+        print(scores)
         s = time.time()
         text_connector = TextConnector()
         # 得到是resize图像后的bbox
         # print(img_info)
         # print('boxes, scores[:, np.newaxis]',boxes.shape, scores[:, np.newaxis].shape,scores.shape)
         text_proposals, scores, boxes = text_connector.detect(pp_boxes, scores[:, np.newaxis], img_info[:2])
+
         print('merge:', time.time() - s)
         # 原图像的绝对bbox位置
         original_bbox, scores = self._resize_bbox(boxes, scale)
 
-        return pp_boxes, original_bbox, scores
+        return pp_boxes/scale, original_bbox, scores
 
     def _get_net_output(self, img_input, img_info):
         feed_dict = {self.ctpn_network.img_input: img_input, self.ctpn_network.im_info: [img_info]}
         res_list = self.sess.run([self.rpn_rois, self.rpn_targets], feed_dict=feed_dict)
-        # print(rois)
-        # print(rois[0])
         rois = res_list[0]
         print(rois.shape)
         scores = rois[:, 0]

@@ -16,7 +16,6 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     Parameters
     ----------
     rpn_cls_prob_reshape: (1 , H , W , Ax2) outputs of RPN, prob of bg or fg
-                         NOTICE: the old version is ordered by (1, H, W, 2, A) !!!!
     rpn_bbox_pred: (1 , H , W , Ax4), rgs boxes output of RPN
     im_info: a list of [image_height, image_width, scale_ratios]
     _feat_stride: the downsampling ratio of feature map to the original input image
@@ -54,6 +53,7 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     min_size      = cfg["TEST"]["RPN_MIN_SIZE"]  # 候选box的最小尺寸，目前是16，高宽均要大于16
 
     height, width = rpn_cls_prob_reshape.shape[1:3]  # feature-map的高宽
+    width = width // 10
 
     # the first set of _num_anchors channels are bg probs
     # the second set are the fg probs, which we want
@@ -65,7 +65,6 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
     # 并reshape到1*H*W*10
 
     bbox_deltas = rpn_bbox_pred  # 模型输出的pred是相对值，需要进一步处理成真实图像中的坐标
-    # im_info = bottom[2].data[0, :]
 
     # Enumerate all shifts
     # 同anchor-target-layer-tf这个文件一样，生成anchor的shift，进一步得到整张图像上的所有anchor
@@ -113,12 +112,12 @@ def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, _feat_stride=[c
 
     # 3. remove predicted boxes with either height or width < threshold
     # (NOTE: convert min_size to input image scale stored in im_info[2])
-    keep = _filter_boxes(proposals, min_size * im_info[2])  # 移除那些proposal小于一定尺寸的proposal
+    keep = _filter_boxes(proposals, min_size)  # 移除那些proposal小于一定尺寸的proposal
     proposals = proposals[keep, :]  # 保留剩下的proposal
     scores = scores[keep]
     bbox_deltas=bbox_deltas[keep, :]
     print('proposals1', proposals.shape)
-    score_filter = np.where(scores > 0.2)[0]
+    score_filter = np.where(scores > 0.0)[0]
     proposals = proposals[score_filter, :]
     scores = scores[score_filter]
     bbox_deltas = bbox_deltas[score_filter, :]
@@ -174,3 +173,50 @@ def _filter_irregular_boxes(boxes, min_ratio = 0.2, max_ratio = 5):
     rs = ws / hs
     keep = np.where((rs <= max_ratio) & (rs >= min_ratio))[0]
     return keep
+
+
+if __name__ == "__main__":
+    im_info = [800, 600, 1]
+    _feat_stride = [16, ]
+
+    _anchors = generate_anchors()  # 生成基本的10个anchor
+    _num_anchors = _anchors.shape[0]  # 10个anchor
+
+    im_info = im_info[0]  # 原始图像的高宽、缩放尺度
+
+    rpn_cls_prob_shape = [1, 50, 370, 2]
+
+    pre_nms_topN = cfg["TEST"]["RPN_PRE_NMS_TOP_N"]  # 12000,在做nms之前，最多保留的候选box数目
+    post_nms_topN = cfg["TEST"]["RPN_POST_NMS_TOP_N"]  # 2000，做完nms之后，最多保留的box的数目
+    nms_thresh = cfg["TEST"]["RPN_NMS_THRESH"]  # nms用参数，阈值是0.7
+    min_size = cfg["TEST"]["RPN_MIN_SIZE"]  # 候选box的最小尺寸，目前是16，高宽均要大于16
+
+    height, width = rpn_cls_prob_shape[1:3]  # feature-map的高宽
+    width = width // 10
+
+    # Enumerate all shifts
+    # 同anchor-target-layer-tf这个文件一样，生成anchor的shift，进一步得到整张图像上的所有anchor
+    shift_x = np.arange(0, width) * _feat_stride
+    shift_y = np.arange(0, height) * _feat_stride
+
+    # shift_x shape = [height, width]
+    # 生成同样维度的两个矩阵
+    shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+    # print("shift_x", shift_x.shape)
+    # print("shift_y", shift_y.shape)
+    # shifts shape = [height*width,4]
+    shifts = np.vstack((shift_x.ravel(), shift_y.ravel(),
+                        shift_x.ravel(), shift_y.ravel())).transpose()
+
+    # Enumerate all shifted anchors:
+    #
+    # add A anchors (1, A, 4) to
+    # cell K shifts (K, 1, 4) to get
+    # shift anchors (K, A, 4)
+    # reshape to (K*A, 4) shifted anchors
+    A = _num_anchors  # 10
+    K = shifts.shape[0]  # height*width,[height*width,4]
+    anchors = _anchors.reshape((1, A, 4)) + \
+              shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+    anchors = anchors.reshape((K * A, 4))  # 这里得到的anchor就是整张图像上的所有anchor
+    print(anchors)

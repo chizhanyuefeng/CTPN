@@ -13,8 +13,6 @@ from lib.network.ctpn_detector import CtpnDetector
 train = True
 
 config = tf.ConfigProto(allow_soft_placement=True)
-config.gpu_options.allocator_type = 'BFC'
-config.gpu_options.per_process_gpu_memory_fraction = 0.75
 with tf.Session(config=config) as sess:
     if train:
         s = SloverWrapper(sess)
@@ -22,14 +20,14 @@ with tf.Session(config=config) as sess:
     else:
         ctpn = CtpnDetector(sess)
         img = cv2.imread("./10pic/train_image/hs (3).jpg")
-        img_dir = './test/'
+        img_dir = './10pic/train_image/'
         img_list = os.listdir(img_dir)
         for img_name in img_list:
             img = cv2.imread(os.path.join(img_dir, img_name))
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             print('*********************************************')
             s = time.time()
-            a = ctpn.detect(img.copy())
+            a = ctpn.detect(img)
             print('time:', time.time()-s)
             b_img = img.copy()
             for b in a[1]:

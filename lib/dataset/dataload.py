@@ -26,7 +26,7 @@ class Dataload(object):
     def getbatch(self):
         img = cv2.imread(os.path.join(self.img_dir, self.img_path_list[self.current_index]))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img, ratio = resize_img(img)
+        img, _ = resize_img(img)
         img = img_normailize(img)
         h, w, c = img.shape
         # print(img.shape)
@@ -56,9 +56,19 @@ class Dataload(object):
             self.current_index = 0
             random.shuffle(self.img_path_list)
 
-        return img_data, np.array(labels_data), np.array(img.shape).reshape([1, 3])
+        return img_data, np.array(labels_data, np.int), np.array(img.shape).reshape([1, 3])
 
 
 if __name__ == "__main__":
-    class_dict = {name: i for i, name in enumerate(cfg["CLASSES"])}
-    print(class_dict)
+    d = Dataload(cfg["TRAIN"]["TRAIN_IMG_DIR"], cfg["TRAIN"]["TRAIN_LABEL_DIR"])
+
+    img_input, labels, img_info = d.getbatch()
+    img = img_input[0]
+    print(labels)
+    for bbox in labels:
+        cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 255, 0))
+
+    cv2.imshow('d', img)
+    cv2.waitKey()
+
+

@@ -1,12 +1,13 @@
 # -*- coding:utf-8 -*-
+import cv2
 import numpy as np
 import numpy.random as npr
-from .generate_anchors import generate_anchors
-from lib.bbox_utils.bbox import bbox_overlaps, bbox_intersections
+from lib.rpn_layer.generate_anchors import generate_anchors
+from lib.bbox_utils.bbox import bbox_overlaps
 from lib.utils.config import cfg
 from lib.bbox_utils.bbox_transform import bbox_transform
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["ANCHOR_WIDTH"],]):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, img=None):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
@@ -27,6 +28,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
                             beacuse the numbers of bgs and fgs mays significiantly different
     """
     # print(gt_boxes)
+    _feat_stride = [cfg["ANCHOR_WIDTH"], ]
     _anchors = generate_anchors()  # 生成基本的anchor,一共10个
     _num_anchors = _anchors.shape[0]  # 10个anchor
 
@@ -48,7 +50,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
 
     # map of shape (..., H, W)
     height, width = rpn_cls_score.shape[1:3]  # feature-map的高宽
-    # print('feature shape:', height, width)
+    # print('feature shape:', rpn_cls_score.shape)
+    # print('img info', im_info)
 
     # 1. Generate proposals from bbox deltas and shifted anchors
     shift_x = np.arange(0, width) * _feat_stride
@@ -61,7 +64,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
     # cell K shifts (K, 1, 4) to get
     # shift anchors (K, A, 4)
     # reshape to (K*A, 4) shifted anchors
-    A = _num_anchors  # 9个anchor
+    A = _num_anchors  # 10个anchor
     K = shifts.shape[0]  # 50*37，feature-map的宽乘高的大小
     all_anchors = (_anchors.reshape((1, A, 4)) +
                    shifts.reshape((1, K, 4)).transpose((1, 0, 2)))  # 相当于复制宽高的维度，然后相加
@@ -191,6 +194,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride = [cfg["A
         .reshape((1, height, width, A * 4))
     rpn_bbox_outside_weights = bbox_outside_weights
 
+    # print("rpn_labels", np.where(rpn_labels==1))
+    # print("rpn_bbox_targets", rpn_bbox_targets[0])
+    # print("rpn_bbox_inside_weights", rpn_bbox_inside_weights[0])
+    # print("rpn_bbox_outside_weights", rpn_bbox_outside_weights[0])
+
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
 
@@ -217,3 +225,58 @@ def _compute_targets(ex_rois, gt_rois):
     assert gt_rois.shape[1] == 5
 
     return bbox_transform(ex_rois, gt_rois[:, :4]).astype(np.float32, copy=False)
+
+
+if __name__ == "__main__":
+    img = cv2.imread('/home/zzh/ocr/CTPN/CTPN-tf/10pic/train_image/IMG_2355.jpg')
+
+    im_info = [800, 600, 1]
+    _feat_stride = [16, ]
+
+    _anchors = generate_anchors()  # 生成基本的10个anchor
+    _num_anchors = _anchors.shape[0]  # 10个anchor
+
+    im_info = im_info[0]  # 原始图像的高宽、缩放尺度
+
+    rpn_cls_prob_shape = [1, 50, 370, 2]
+
+    pre_nms_topN = cfg["TEST"]["RPN_PRE_NMS_TOP_N"]  # 12000,在做nms之前，最多保留的候选box数目
+    post_nms_topN = cfg["TEST"]["RPN_POST_NMS_TOP_N"]  # 2000，做完nms之后，最多保留的box的数目
+    nms_thresh = cfg["TEST"]["RPN_NMS_THRESH"]  # nms用参数，阈值是0.7
+    min_size = cfg["TEST"]["RPN_MIN_SIZE"]  # 候选box的最小尺寸，目前是16，高宽均要大于16
+
+    height, width = rpn_cls_prob_shape[1:3]  # feature-map的高宽
+    width = width // 10
+
+    # Enumerate all shifts
+    # 同anchor-target-layer-tf这个文件一样，生成anchor的shift，进一步得到整张图像上的所有anchor
+    shift_x = np.arange(0, width) * _feat_stride
+    shift_y = np.arange(0, height) * _feat_stride
+
+    # shift_x shape = [height, width]
+    # 生成同样维度的两个矩阵
+    shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+    # print("shift_x", shift_x.shape)
+    # print("shift_y", shift_y.shape)
+    # shifts shape = [height*width,4]
+    shifts = np.vstack((shift_x.ravel(), shift_y.ravel(),
+                        shift_x.ravel(), shift_y.ravel())).transpose()
+
+    # Enumerate all shifted anchors:
+    #
+    # add A anchors (1, A, 4) to
+    # cell K shifts (K, 1, 4) to get
+    # shift anchors (K, A, 4)
+    # reshape to (K*A, 4) shifted anchors
+    A = _num_anchors  # 10
+    K = shifts.shape[0]  # height*width,[height*width,4]
+    anchors = _anchors.reshape((1, A, 4)) + \
+              shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+    anchors = anchors.reshape((K * A, 4))  # 这里得到的anchor就是整张图像上的所有anchor
+    print(anchors)
+
+    for box in anchors:
+        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (255, 0, 0))
+
+    cv2.imshow('d', img)
+    cv2.waitKey()

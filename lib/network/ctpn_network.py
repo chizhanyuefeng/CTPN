@@ -26,18 +26,24 @@ class CTPN(object):
 
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5], name='gt_boxes')
 
-        proposal_predicted, proposal_cls_score, proposal_cls_prob = self.__ctpn_base()
+        proposal_predicted, proposal_cls_score, _ = self.__ctpn_base()
+
         rpn_labels, \
         rpn_bbox_targets, \
         rpn_bbox_inside_weights, \
         rpn_bbox_outside_weights = self.__anchor_layer(proposal_cls_score)
 
         # classification loss
-        rpn_cls_score = tf.reshape(proposal_cls_score, [-1, 2])  # shape (HxWxA, 2)
+        # (1, H, W, A x d) -> (1, H, WxA, d)
+        cls_pred_shape = tf.shape(proposal_cls_score)
+        cls_pred_reshape = tf.reshape(proposal_cls_score, [cls_pred_shape[0], cls_pred_shape[1], -1, 2])
+        rpn_cls_score = tf.reshape(cls_pred_reshape, [-1, 2])
+
         rpn_label = tf.reshape(rpn_labels, [-1])  # shape (HxWxA)
-        # ignore_label(-1)
+
         fg_keep = tf.equal(rpn_label, 1)
         rpn_keep = tf.where(tf.not_equal(rpn_label, -1))
+
         rpn_cls_score = tf.gather(rpn_cls_score, rpn_keep)  # shape (N, 2)
         rpn_label = tf.gather(rpn_label, rpn_keep)
         rpn_cross_entropy_n = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=rpn_label, logits=rpn_cls_score)
@@ -92,8 +98,8 @@ class CTPN(object):
         with tf.variable_scope("CTPN_Network"):
             with slim.arg_scope([slim.conv2d, slim.fully_connected],
                                 weights_initializer=tf.truncated_normal_initializer(0.0, stddev=stddev),
-                                weights_regularizer=slim.l2_regularizer(weight_decay),
-                                activation_fn=tf.nn.relu):
+                                weights_regularizer=slim.l2_regularizer(weight_decay)
+                                ):
 
                 if cfg["BACKBONE"] == "InceptionNet":
                     features, featuremap_scale = inception_base(self.img_input)
@@ -102,29 +108,41 @@ class CTPN(object):
                 else:
                     assert 0, "error: backbone {} is not support!".format(cfg["BACKBONE"])
 
-                print('featuremap_scale is {}, anchor width is {}'.format(featuremap_scale, cfg['ANCHOR_WIDTH']))
-                assert featuremap_scale == cfg['ANCHOR_WIDTH']
+            print('featuremap_scale is {}, anchor width is {}'.format(featuremap_scale, cfg['ANCHOR_WIDTH']))
+            assert featuremap_scale == cfg['ANCHOR_WIDTH']
 
-                print("using {} backbone...".format(cfg["BACKBONE"]))
+            print("using {} backbone...".format(cfg["BACKBONE"]))
 
-                features = slim.conv2d(features, 512, [3, 3], activation_fn=None, scope='rpn_conv_3x3')
+            features = slim.conv2d(features, 512, [3, 3], scope='rpn_conv_3x3')
 
-                if cfg["USE_LSTM"]:
-                    features = self.__bilstm(features, 512, 128, 512)
-                else:
-                    features = self.__semantic_info_extract_layer(features)
-                print('Lstm is using?', cfg["USE_LSTM"])
+            if cfg["USE_LSTM"]:
+                features = self.__bilstm(features, 512, 128, 512)
+            else:
+                features = self.__semantic_info_extract_layer(features)
+            print('Lstm is using?', cfg["USE_LSTM"])
 
-                features_shape = tf.shape(features)
-                # proposal_predicted shape = [1, h, w, A*2] TODO:回归2个值
-                proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1', activation_fn=None)
-                # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
-                proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1', activation_fn=None)
-                proposal_cls_score_shape = tf.shape(proposal_cls_score)
-                # proposal_cls_score_reshape shape = [h*w*A, cfg["CLASSES_NUM"]]
-                proposal_cls_score_reshape = tf.reshape(proposal_cls_score, [-1, cfg["CLASSES_NUM"]])
-                # proposal_cls_prob shape = [1, h, w, A*cfg["CLASSES_NUM"]]
-                proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score_reshape), proposal_cls_score_shape)
+            proposal_predicted = self._lstm_fc(features, 512, 10 * 4, scope_name="bbox_pred")
+            proposal_cls_score = self._lstm_fc(features, 512, 10 * 2, scope_name="cls_pred")
+            # # proposal_predicted shape = [1, h, w, A*4]
+            # proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1', activation_fn=None)
+            # # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
+            # proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1', activation_fn=None)
+
+            proposal_cls_score_shape = tf.shape(proposal_cls_score)
+            # proposal_cls_score_reshape shape = [h*w*A, cfg["CLASSES_NUM"]]
+            proposal_cls_score_reshape = tf.reshape(proposal_cls_score, [proposal_cls_score_shape[0],
+                                                                         proposal_cls_score_shape[1],
+                                                                         -1,
+                                                                         cfg["CLASSES_NUM"]])
+            proposal_cls_score_reshape_shape = tf.shape(proposal_cls_score_reshape)
+            proposal_cls_score_reshape = tf.reshape(proposal_cls_score_reshape, [-1, cfg["CLASSES_NUM"]])
+            # proposal_cls_prob shape = [1, h, w, A*cfg["CLASSES_NUM"]]
+            proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score_reshape),
+                                           [-1,
+                                            proposal_cls_score_reshape_shape[1],
+                                            proposal_cls_score_reshape_shape[2],
+                                            proposal_cls_score_reshape_shape[3]]
+                                           )
 
         return proposal_predicted, proposal_cls_score, proposal_cls_prob
 
@@ -150,7 +168,7 @@ class CTPN(object):
             # 'rpn_cls_score', 'gt_boxes', 'im_info'
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
                 tf.py_func(anchor_target_layer,
-                           [proposal_cls_score, self.gt_boxes, self.im_info],
+                           [proposal_cls_score, self.gt_boxes, self.im_info, self.img_input],
                            [tf.float32, tf.float32, tf.float32, tf.float32])
 
             rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),
@@ -222,6 +240,22 @@ class CTPN(object):
             smoothL1_sign = tf.cast(tf.less(deltas_abs, 1.0/sigma2), tf.float32)
             return tf.square(deltas) * 0.5 * sigma2 * smoothL1_sign + \
                         (deltas_abs - 0.5 / sigma2) * tf.abs(smoothL1_sign - 1)
+
+    def _lstm_fc(self, net, input_channel, output_channel, scope_name):
+        with tf.variable_scope(scope_name) as scope:
+            shape = tf.shape(net)
+            N, H, W, C = shape[0], shape[1], shape[2], shape[3]
+            net = tf.reshape(net, [N * H * W, C])
+
+            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=0.01, mode='FAN_AVG', uniform=False)
+            init_biases = tf.constant_initializer(0.0)
+            weights = tf.get_variable('weights', [input_channel, output_channel], initializer=init_weights)
+            biases = tf.get_variable('biases', [output_channel], initializer=init_biases)
+
+            output = tf.matmul(net, weights) + biases
+            output = tf.reshape(output, [N, H, W, output_channel])
+        return output
+
 
 if __name__ == "__main__":
     pass

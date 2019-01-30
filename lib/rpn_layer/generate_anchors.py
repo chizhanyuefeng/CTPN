@@ -27,10 +27,12 @@ def scale_anchor(anchor, h, w):
 def generate_anchors():
     heights = cfg["ANCHOR_HEIGHT"]
     width = cfg["ANCHOR_WIDTH"]
+
     sizes = []
     for h in heights:
         sizes.append((h, width))
     return generate_basic_anchors(sizes)
 
 if __name__ == '__main__':
-    pass
+    a = generate_anchors()
+    print(a)
