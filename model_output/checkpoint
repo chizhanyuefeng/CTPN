@@ -1,4 +1,0 @@
-model_checkpoint_path: "CTPN_VggNet_iter_60000.ckpt"
-all_model_checkpoint_paths: "CTPN_VggNet_iter_20000.ckpt"
-all_model_checkpoint_paths: "CTPN_VggNet_iter_40000.ckpt"
-all_model_checkpoint_paths: "CTPN_VggNet_iter_60000.ckpt"
