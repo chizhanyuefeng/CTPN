@@ -1,13 +1,15 @@
 import cv2
 import numpy as np
 
+
 def resize_img(img, scale=600, max_scale=1200):
     ratio = float(scale) / min(img.shape[0], img.shape[1])
     if max_scale != None and ratio * max(img.shape[0], img.shape[1]) > max_scale:
         ratio = float(max_scale) / max(img.shape[0], img.shape[1])
 
-    iiimg = cv2.resize(img, None, None, fx=ratio, fy=ratio, interpolation=cv2.INTER_LINEAR)
-    return iiimg, ratio
+    img = cv2.resize(img, None, None, fx=ratio, fy=ratio, interpolation=cv2.INTER_LINEAR)
+    return img, ratio
+
 
 def img_normailize(img, method="PIXEL_MEANS"):
     img = img.astype(np.float32, copy=True)

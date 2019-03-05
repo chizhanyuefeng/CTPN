@@ -40,13 +40,13 @@ class Dataload(object):
         with open(os.path.join(self.label_dir, label_name)) as f:
             lines = f.readlines()
             for line in lines:
-                encode_data = line.split('\t')
+                decode_data = line.split('\t')
                 label = []
-                label.append(float(encode_data[1]))
-                label.append(float(encode_data[2]))
-                label.append(float(encode_data[3]))
-                label.append(float(encode_data[4]))
-                label.append(int(self.class_dict[encode_data[0]]))
+                label.append(float(decode_data[1]))
+                label.append(float(decode_data[2]))
+                label.append(float(decode_data[3]))
+                label.append(float(decode_data[4]))
+                label.append(int(self.class_dict[decode_data[0]]))
                 labels_data.append(label)
 
         if self.current_index + 1 + 1 <= len(self.img_path_list):
@@ -61,14 +61,15 @@ class Dataload(object):
 
 if __name__ == "__main__":
     d = Dataload(cfg["TRAIN"]["TRAIN_IMG_DIR"], cfg["TRAIN"]["TRAIN_LABEL_DIR"])
+    for i in range(10):
+        img_input, labels, img_info = d.getbatch()
+        img = img_input[0]
+        print(labels)
+        for bbox in labels:
+            if bbox[4] == 1:
+                cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0))
 
-    img_input, labels, img_info = d.getbatch()
-    img = img_input[0]
-    print(labels)
-    for bbox in labels:
-        cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 255, 0))
-
-    cv2.imshow('d', img)
-    cv2.waitKey()
+        cv2.imshow('d', img)
+        cv2.waitKey()
 
 

@@ -10,7 +10,7 @@ from lib.utils.config import cfg
 from lib.network.ctpn_detector import CtpnDetector
 
 
-train = True
+train = False
 
 config = tf.ConfigProto(allow_soft_placement=True)
 with tf.Session(config=config) as sess:
