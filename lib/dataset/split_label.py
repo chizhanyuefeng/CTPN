@@ -8,15 +8,22 @@ from tqdm import tqdm
 sys.path.append(os.getcwd())
 from lib.dataset.utils import orderConvex, shrink_poly
 
-DATA_FOLDER = "/home/zzh/ocr/dataset/ikkyyu_data/v8"
-OUTPUT = "/home/zzh/ocr/dataset/ctpn_train"
+DATA_FOLDER = "./data"
+DATA_IMAGE_DIR = os.path.join(DATA_FOLDER, 'image')
+DATA_LABEL_DIR = os.path.join(DATA_FOLDER, 'label')
+
+
 MAX_LEN = 1200
 MIN_LEN = 600
 WIDTH = 8
 
-im_fns = os.listdir(os.path.join(DATA_FOLDER, "img"))
+im_fns = os.listdir(os.path.join(DATA_FOLDER, "image"))
 im_fns.sort()
 
+OUTPUT = "./data/ctpn_train"
+
+if not os.path.exists(OUTPUT):
+    os.makedirs(OUTPUT)
 if not os.path.exists(os.path.join(OUTPUT, "image")):
     os.makedirs(os.path.join(OUTPUT, "image"))
 if not os.path.exists(os.path.join(OUTPUT, "label")):
@@ -60,11 +67,8 @@ for im_fn in tqdm(im_fns):
             poly[:, 0] = poly[:, 0] / img_size[1] * re_size[1]
             poly[:, 1] = poly[:, 1] / img_size[0] * re_size[0]
             poly = orderConvex(poly)
-            # print(poly)
             polys.append(poly)
             cls_list.append(cls)
-
-            # cv.polylines(re_im, [poly.astype(np.int32).reshape((-1, 1, 2))], True,color=(0, 255, 0), thickness=2)
 
         res_polys = []
         res_cls_list = []
@@ -74,8 +78,6 @@ for im_fn in tqdm(im_fns):
                 continue
 
             res = shrink_poly(poly, r=WIDTH)
-            # for p in res:
-            #    cv.polylines(re_im, [p.astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 255, 0), thickness=1)
 
             res = res.reshape([-1, 4, 2])
             res_num = res.shape[0]
@@ -105,7 +107,5 @@ for im_fn in tqdm(im_fns):
                     assert 0, 'error cls'
                 cv.rectangle(re_im,(p[0],p[1]),(p[2],p[3]),color=color,thickness=1)
 
-            # cv.imshow("demo", re_im)
-            # cv.waitKey()
     except:
         print("Error processing {}".format(im_fn))

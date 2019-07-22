@@ -13,12 +13,24 @@ if __name__ == "__main__":
     # print(keys)
 
     train_data_load = Dataload(cfg["TRAIN"]["TRAIN_IMG_DIR"], cfg["TRAIN"]["TRAIN_LABEL_DIR"])
-    img_input, labels, img_info = train_data_load.getbatch()
-    print(labels)
+    for i in range(10):
+        img_input, labels, img_info = train_data_load.getbatch()
+        print(img_info)
 
-    # txt_dir = "/home/tony/ocr/CTPN/train_label"
-    # img_dir = "/home/tony/ocr/CTPN/train_image"
-    # img_list = os.listdir(img_dir)
+        # txt_dir = "/home/tony/ocr/CTPN/train_label"
+        # img_dir = "/home/tony/ocr/CTPN/train_image"
+        # img_list = os.listdir(img_dir)
+        img = img_input[0]
+        for label in labels:
+
+            if label[4] == 1:
+                cv2.rectangle(img, (label[0], label[1]), (label[2], label[3]), (255, 0, 0))
+            else:
+                cv2.rectangle(img, (label[0], label[1]), (label[2], label[3]), (0, 255, 0))
+
+        cv2.imshow("dw", img)
+        cv2.waitKey()
+
     #
     # for img_name in img_list:
     #     img_basename = img_name.split(".")[0]

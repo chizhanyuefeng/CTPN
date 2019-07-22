@@ -3,7 +3,6 @@ BACKBONE: "VggNet"
 # 16 or 8
 ANCHOR_WIDTH: 16
 ANCHOR_HEIGHT: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
-# class num = 前景类别数目+1（背景）
 CLASSES_NUM: 2
 CLASSES_NAME: ["background", "text"]
 USE_GPU_NMS: True
@@ -23,7 +22,6 @@ TRAIN:
   MIN_LEARNING_RATE: 0.00001
   DISPLAY: 10
   RPN_BATCHSIZE: 300
-  BATCHSIZE: 32
   GAMMA: 0.1
   MOMENTUM: 0.9
   RPN_POSITIVE_OVERLAP: 0.7
@@ -38,10 +36,10 @@ TRAIN:
   MODEL_OUTPUT_DIR: "./models/train_output/"
   LOGS_DIR: "./logs/"
   PRETRAIN_MODEL: "./models/pretrain_model/VGG_imagenet.npy"
-  TRAIN_IMG_DIR: "./10pic/train_image/"
-  TRAIN_LABEL_DIR: "./10pic/train_label/"
+  TRAIN_IMG_DIR: "./data/image/"
+  TRAIN_LABEL_DIR: "./data/label/"
   SOLVER: "Adam"
-  MOVING_AVERAGE_DECAY: 0.997
+  WITH_CLIP: True
 
 TEST:
   DETECT_MODE: H

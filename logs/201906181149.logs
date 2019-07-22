@@ -1,0 +1,1 @@
+2019-06-18 11:49:28,043 - solver_wrapper.py[line:65] - INFO: no pretrain model to load from :./models/pretrain_model/VGG_imagenet.npy

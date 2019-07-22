@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 from urllib import request
 
-img_path = "/home/zzh/ocr/dataset/ikkyyu_data/v8/img"
-res_path = "/home/zzh/ocr/dataset/ikkyyu_data/v8/vis"
-txt_path = "/home/zzh/ocr/dataset/ikkyyu_data/v8/label"
+img_path = "/home/zzh/ocr/dataset/tal_raw/v9/img"
+res_path = "/home/zzh/ocr/dataset/tal_raw/v9/vis"
+txt_path = "/home/zzh/ocr/dataset/tal_raw/v9/label"
 label = {"手写框": 0, "打印框": 1, "整体": 2}
 
 
@@ -16,7 +16,7 @@ def parse_json(path):
     str_data = r.read()
     # print(str_data)
     data = json.loads(str_data)
-    img_dict_list = data["image_datas"]
+    img_dict_list = data['true_message']["image_datas"]
     for img_dict in tqdm.tqdm(img_dict_list):
         img_url = img_dict["pic_url"]
         # print(img_dict["pic_name"])
@@ -108,7 +108,7 @@ def analysis_json(path):
     print(label)
 
 
-json_dir = '/home/zzh/v8/json'
+json_dir = '/home/zzh/ocr/dataset/tal_raw/v9/json'
 json_list = os.listdir(json_dir)
 for json_name in json_list:
     print(json_name)

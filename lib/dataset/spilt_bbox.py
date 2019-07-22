@@ -3,7 +3,6 @@ import numpy as np
 import math
 import cv2 as cv
 
-from lib.dataset.parse_xml import ParseXml
 from lib.utils.config import cfg
 from lib.dataset.img_utils import resize_img
 

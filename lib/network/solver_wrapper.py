@@ -8,7 +8,6 @@ from lib.utils.config import cfg
 from lib.network.ctpn_network import CTPN
 from lib.dataset.dataload import Dataload
 
-
 class SloverWrapper(object):
 
     def __init__(self, sess):
@@ -48,24 +47,13 @@ class SloverWrapper(object):
             opt = tf.train.MomentumOptimizer(lr, momentum)
 
         global_step = tf.Variable(0, trainable=False)
-        # with_clip = cfg["TRAIN"]["WITH_CLIP"]
-        # if with_clip:
-        #     tvars = tf.trainable_variables()
-        #     grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
-        #     train_op = opt.apply_gradients(list(zip(grads, tvars)), global_step=global_step)
-        # else:
-        #     train_op = opt.minimize(total_loss, global_step=global_step)
-
-        batch_norm_updates_op = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
-        grads = opt.compute_gradients(total_loss)
-        apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-
-        variable_averages = tf.train.ExponentialMovingAverage(
-            cfg["TRAIN"]['MOVING_AVERAGE_DECAY'], global_step)
-        variables_averages_op = variable_averages.apply(tf.trainable_variables())
-
-        with tf.control_dependencies([variables_averages_op, apply_gradient_op, batch_norm_updates_op]):
-            train_op = tf.no_op(name='train_op')
+        with_clip = cfg["TRAIN"]["WITH_CLIP"]
+        if with_clip:
+            tvars = tf.trainable_variables()
+            grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
+            train_op = opt.apply_gradients(list(zip(grads, tvars)), global_step=global_step)
+        else:
+            train_op = opt.minimize(total_loss, global_step=global_step)
 
         # intialize variables
         self.sess.run(tf.global_variables_initializer())
@@ -98,12 +86,11 @@ class SloverWrapper(object):
 
             img_input, labels, img_info = train_data_load.getbatch()
             # print(img_input)
-            feed_dict = {self.network.img_input: img_input,
-                         self.network.gt_boxes: labels,
-                         self.network.im_info: img_info}
+            feed_dict = {self.network.img_input: img_input, self.network.gt_boxes: labels, self.network.im_info: img_info}
 
             fetch_list = [total_loss, model_loss, rpn_cross_entropy, rpn_loss_box,
-                          summary_op, train_op]
+                          summary_op,
+                          train_op]
 
             total_loss_val, model_loss_val, rpn_loss_cls_val, rpn_loss_box_val, \
             summary_str, _ = self.sess.run(fetches=fetch_list, feed_dict=feed_dict)

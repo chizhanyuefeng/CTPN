@@ -123,6 +123,10 @@ class CTPN(object):
 
             proposal_predicted = self._lstm_fc(features, 512, 10 * 4, scope_name="bbox_pred")
             proposal_cls_score = self._lstm_fc(features, 512, 10 * 2, scope_name="cls_pred")
+            # # proposal_predicted shape = [1, h, w, A*4]
+            # proposal_predicted = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * 4, [1, 1], scope='proposal_conv_1x1', activation_fn=None)
+            # # proposal_cls_score shape = [1, h, w, A*cfg["CLASSES_NUM"]]
+            # proposal_cls_score = slim.conv2d(features, len(cfg["ANCHOR_HEIGHT"]) * cfg["CLASSES_NUM"], [1, 1], scope='cls_conv_1x1', activation_fn=None)
 
             proposal_cls_score_shape = tf.shape(proposal_cls_score)
             # proposal_cls_score_reshape shape = [h*w*A, cfg["CLASSES_NUM"]]
@@ -131,7 +135,7 @@ class CTPN(object):
                                                                          -1,
                                                                          cfg["CLASSES_NUM"]])
             proposal_cls_score_reshape_shape = tf.shape(proposal_cls_score_reshape)
-            proposal_cls_score_reshape = tf.reshape(proposal_cls_score_reshape, [-1, proposal_cls_score_reshape_shape[3]])
+            proposal_cls_score_reshape = tf.reshape(proposal_cls_score_reshape, [-1, cfg["CLASSES_NUM"]])
             # proposal_cls_prob shape = [1, h, w, A*cfg["CLASSES_NUM"]]
             proposal_cls_prob = tf.reshape(tf.nn.softmax(proposal_cls_score_reshape),
                                            [-1,
@@ -178,13 +182,13 @@ class CTPN(object):
 
             return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
-    def __bilstm(self, input, input_channel, hidden_unit_num, output_channel, name="Bilstm"):
+    def __bilstm(self, input, d_i, d_h, d_o, name="Bilstm"):
         """
         双向rnn
         :param input:
-        :param input_channel: 512 每个timestep 携带信息
-        :param hidden_unit_num: 128 一层rnn
-        :param output_channel: 512 最后rrn层输出
+        :param d_i: 512 每个timestep 携带信息
+        :param d_h: 128 一层rnn
+        :param d_o: 512 最后rrn层输出
         :param name:
         :param trainable:
         :return:
@@ -193,17 +197,17 @@ class CTPN(object):
             shape = tf.shape(input)
             N, H, W, C = shape[0], shape[1], shape[2], shape[3]
             img = tf.reshape(input, [N * H, W, C])
-            img.set_shape([None, None, input_channel])
+            img.set_shape([None, None, d_i])
 
-            lstm_fw_cell = tf.contrib.rnn.LSTMCell(hidden_unit_num, state_is_tuple=True)
-            lstm_bw_cell = tf.contrib.rnn.LSTMCell(hidden_unit_num, state_is_tuple=True)
+            lstm_fw_cell = tf.contrib.rnn.LSTMCell(d_h, state_is_tuple=True)
+            lstm_bw_cell = tf.contrib.rnn.LSTMCell(d_h, state_is_tuple=True)
 
             lstm_out, last_state = tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell, lstm_bw_cell, img, dtype=tf.float32)
             lstm_out = tf.concat(lstm_out, axis=-1)
 
-            lstm_out = tf.reshape(lstm_out, [N * H * W, 2 * hidden_unit_num])
-            outputs = slim.fully_connected(lstm_out, output_channel, activation_fn=None, weights_regularizer=None)
-            outputs = tf.reshape(outputs, [N, H, W, output_channel])
+            lstm_out = tf.reshape(lstm_out, [N * H * W, 2*d_h])
+            outputs = slim.fully_connected(lstm_out, d_o, activation_fn=None)
+            outputs = tf.reshape(outputs, [N, H, W, d_o])
 
             return outputs
 
@@ -238,7 +242,7 @@ class CTPN(object):
                         (deltas_abs - 0.5 / sigma2) * tf.abs(smoothL1_sign - 1)
 
     def _lstm_fc(self, net, input_channel, output_channel, scope_name):
-        with tf.variable_scope(scope_name):
+        with tf.variable_scope(scope_name) as scope:
             shape = tf.shape(net)
             N, H, W, C = shape[0], shape[1], shape[2], shape[3]
             net = tf.reshape(net, [N * H * W, C])
